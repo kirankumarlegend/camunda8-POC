@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:zeebe="http://camunda.org/schema/zeebe/1.0" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:modeler="http://camunda.org/schema/modeler/1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definitions_1" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Camunda Modeler" exporterVersion="5.14.0" modeler:executionPlatform="Camunda Cloud" modeler:executionPlatformVersion="8.5.0">
+  <bpmn:process id="push-notification-workflow" name="Push Notification Generation Workflow" isExecutable="true">
+    <bpmn:startEvent id="StartEvent_1" name="Start with Workfront Project ID">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="StartEvent_1" targetRef="GetWorkfrontMetadata" />
+    
+    <bpmn:serviceTask id="GetWorkfrontMetadata" name="Get Workfront Metadata">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="get-workfront-metadata" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="GetWorkfrontMetadata" targetRef="GeneratePushNotifications" />
+    
+    <bpmn:serviceTask id="GeneratePushNotifications" name="Generate Push Notifications">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="generate-push-notifications" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_2</bpmn:incoming>
+      <bpmn:incoming>Flow_Regenerate</bpmn:incoming>
+      <bpmn:outgoing>Flow_3</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="Flow_3" sourceRef="GeneratePushNotifications" targetRef="EvaluateNotifications" />
+    
+    <bpmn:serviceTask id="EvaluateNotifications" name="Evaluate Notification Quality">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="evaluate-notifications" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_3</bpmn:incoming>
+      <bpmn:outgoing>Flow_4</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="Flow_4" sourceRef="EvaluateNotifications" targetRef="HumanReviewTask" />
+    
+    <bpmn:userTask id="HumanReviewTask" name="Review &#38; Provide Feedback">
+      <bpmn:extensionElements>
+        <zeebe:assignmentDefinition assignee="demo" />
+        <zeebe:formDefinition formKey="camunda-forms:bpmn:userTaskForm_1" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_4</bpmn:incoming>
+      <bpmn:outgoing>Flow_5</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:sequenceFlow id="Flow_5" sourceRef="HumanReviewTask" targetRef="Gateway_Decision" />
+    
+    <bpmn:exclusiveGateway id="Gateway_Decision" name="Review Decision">
+      <bpmn:incoming>Flow_5</bpmn:incoming>
+      <bpmn:outgoing>Flow_Approve</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Reject</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:sequenceFlow id="Flow_Approve" name="Approved" sourceRef="Gateway_Decision" targetRef="PublishNotifications">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=reviewDecision = "approved"</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_Reject" name="Needs Regeneration" sourceRef="Gateway_Decision" targetRef="StoreFeedback">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=reviewDecision = "regenerate"</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    
+    <bpmn:serviceTask id="StoreFeedback" name="Store Feedback for Improvement">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="store-feedback" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_Reject</bpmn:incoming>
+      <bpmn:outgoing>Flow_Regenerate</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="Flow_Regenerate" sourceRef="StoreFeedback" targetRef="GeneratePushNotifications" />
+    
+    <bpmn:serviceTask id="PublishNotifications" name="Publish to CRM System">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="publish-notifications" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_Approve</bpmn:incoming>
+      <bpmn:outgoing>Flow_6</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="Flow_6" sourceRef="PublishNotifications" targetRef="EndEvent_1" />
+    
+    <bpmn:endEvent id="EndEvent_1" name="Notifications Published">
+      <bpmn:incoming>Flow_6</bpmn:incoming>
+    </bpmn:endEvent>
+    
+    <bpmn:textAnnotation id="TextAnnotation_1">
+      <bpmn:text>Input: workfrontProjectId</bpmn:text>
+    </bpmn:textAnnotation>
+    <bpmn:association id="Association_1" sourceRef="StartEvent_1" targetRef="TextAnnotation_1" />
+    
+    <bpmn:textAnnotation id="TextAnnotation_2">
+      <bpmn:text>MCP Tool: workfront_get_metadata</bpmn:text>
+    </bpmn:textAnnotation>
+    <bpmn:association id="Association_2" sourceRef="GetWorkfrontMetadata" targetRef="TextAnnotation_2" />
+    
+    <bpmn:textAnnotation id="TextAnnotation_3">
+      <bpmn:text>MCP Tool: generate_push_notifications</bpmn:text>
+    </bpmn:textAnnotation>
+    <bpmn:association id="Association_3" sourceRef="GeneratePushNotifications" targetRef="TextAnnotation_3" />
+    
+    <bpmn:textAnnotation id="TextAnnotation_4">
+      <bpmn:text>MCP Tool: evaluate_content (multi-model)</bpmn:text>
+    </bpmn:textAnnotation>
+    <bpmn:association id="Association_4" sourceRef="EvaluateNotifications" targetRef="TextAnnotation_4" />
+    
+    <bpmn:textAnnotation id="TextAnnotation_5">
+      <bpmn:text>Human provides feedback on quality, messaging, brand alignment</bpmn:text>
+    </bpmn:textAnnotation>
+    <bpmn:association id="Association_5" sourceRef="HumanReviewTask" targetRef="TextAnnotation_5" />
+  </bpmn:process>
+  
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="push-notification-workflow">
+      <!-- Diagram elements would be here in a full BPMN file -->
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

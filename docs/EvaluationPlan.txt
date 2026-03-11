@@ -1,0 +1,1195 @@
+Requirement :
+
+The Requiremtn is to have an standalone tool to evaluate the MDS responses from MDS API call. for now this tool will be placed in the Evaluation tab in the CBS playground (creative-brand-system-cbs)
+there is some current functionality which doesn't call the MDS yet.  But uploads the user uploaded assets to AEM to the right project.
+Ex :
+7502741-5417-NULL-PMAX-NOV-DEALS-FY26-XCAT-EV2A-BFTG-DNAD-1200x1200-NULL-GM-AA-EL-25011430133EAW700.jpeg
+the user is expected to upload the assets with the above qualified name.
+<projectId>-<DID>-<publisherId>-<platform>-<date>-<assetType>-<size>-<assetName>.<extension>
+
+so the current functionality is to upload the assets to AEM to the right project. by deducing the project from the asset name.
+
+and we have other functionality to retrieve the assets list from AEM under the current project
+Asset view where we can see the assets (image) and asset metadata with various tabs and we can download the assets from AEM.
+
+
+Proposed new functionality and implementation plan :
+When User clicks the upload button --
+    Upload assets to both AEM (with project structure preserved) and GCS (new impl, A single upload call with multiple assets, all the assets will be uploaded to one new directory in a specific GCS bucket)
+    Save the Asset details to postgres DB , with the CBS jobId, GCS path and AEM path and other metadata to track the Asset journey.
+    Create the input.json file from the above metadata
+    Call MDS API using the input.json
+    Store the CBS jobId - MDS jobId mapping in postgres
+
+When we get the MDS response --
+    Store the MDS response in postgres DB ( there is a callback API, which just write the jobId and the Request body to postgres DB -- already implemented)
+    Trigger postprocess of the MDS response read from GCS output location
+    Update the Asset details in postgres DB with the MDS response
+    Calculate the Confidence score and Status based on the MDS response
+    Update the Asset details in postgres DB with the Confidence score and Status
+
+Build APIs to retrieve the Asset details from postgres DB :
+    -- List of Assets
+    -- Asset details
+    -- Asset history
+    -- Asset feedback
+    -- Asset approval
+    -- Asset reject
+
+
+List View --
+    The list view should only display assets which are present in postgres Asset Table
+    Currently displaying all assets in the project folder in AEM
+    Read from postgres DB and display the assets in the list view, either from AEM or GCS
+
+should have other functionality to filter assets bases on status, confidence score, etc..,
+To search for assets.
+
+
+
+*********
+
+planning to cover for Q1. The aspiration is:
+Upload Assets from user machine ( We are not doing any FILE validation + Number of Assets to be uploaded needs to be ceiled at 50 or 100 based on the limit)
+Trigger MDS EVAL
+Implement POST operation after MDS completes
+POST process to derive - Final scoring and Status ( involved Lise for giving THRESHOLD and Weights for every violation - Its an action item for Lise)
+Display on the UI ( List / Grid View)
+Detailed View - Many Metadata will not be applicable as we are not connecting to WF and User roles are not identified.
+Approve Reject - This is going to be simpler flow - The user info will not be saved. But only the status change.
+History / Feedback
+
+**********
+
+
+
+
+Step 1 : Callback API for MDS responses
+Create a CallBack Endpoint API call in CBS MCP server, which just stores the request body to postgres DB, so we can analyze and decide where to do the postprocess of MDS response from
+Call Back API -> Postgres DB.
+
+Callback Table Asset_Eval_Resposnes key(jobId), value(job response)
+
+
+
+
+
+
+Step 2 : Upload
+Assumption :
+upload --  user uploads with asset name template
+Ex :
+7502741-5417-NULL-PMAX-NOV-DEALS-FY26-XCAT-EV2A-BFTG-DNAD-1200x1200-NULL-GM-AA-EL-25011430133EAW700.jpeg
+
+When User uploads asset from UI — Backend does the following sequentially :
+
+Upload the asset to AEM (happening currenlty, keep the project directory structure)
+Upload the asset to GCS ( new impl, from now on)
+Store the job details metadata asset upload locations to postgres DB .
+Create input.json file from the above metadata
+Call MDS API using the input.json
+Store the CBS jobId - MDS job ID mapping in postgres
+
+postgres tables :
+
+Job Table Job Id -- Assets in the job -- project path -- GCS path -- AEM path -- input.json path JobId Mapping tables CBS jobId -> MDS jobId
+
+
+
+
+Step 3 : Postprocess
+keep both callback responses and GCS output for now -- to ensure max reliability
+
+Read the MDS responses from postgres call back table data or GCS data
+process the responses and calculate the weighted average of the violations and store it in Asset table.
+can be triggered by Callback API call or a cron job at periodic intervals that scans the GCS locations and does the postprocessing.
+
+
+
+A new table (Asset level) to check the status of the asset along with the MDS violations and postprocess scores
+
+
+Asset Table Asset Id - Asset Name - project - jobId - Status - Confidence_score - violations - flags - assignedTo - etc.., Callback Table Asset_Eval_Resposnes key(jobId) value(job response) Violations and weightage Table ViolationCode - ViolationName - Weightage -- isSerious -- Ex : "68": { "name": "Alcohol", "is_severe": false, "description": "Alcohol", "weight": 0.0, "threshold_postflag_count": 1, "threshold_publisherflag_count": 5, "threshold_platformflag_count": 5, "severity": 0, "wm_affiliation_factor": 1.0, "use_category_with_wm_affiliation_only": false, "use_ds_confidence": true, "infraction_guidelines": null, "infraction_guidelines_updated_at": null },
+
+
+
+
+
+
+Step 4 : Build other APIS for UI from the available MDS and postprocess Data
+
+Build other get details APIs
+Filtering/Search APIs
+Tying up flows etc..,
+
+
+
+
+MDS API guidelines and limitations  :
+    Only works with Assets in GCS bucket
+    For better performance limit the no of assets in a single request to 100.
+    We can configure the callback API to be triggered when the job is done, but only job status is returned.
+    We can check the job output from the GCS path which we configured in the job submission request.
+
+
+MDS API Curls :
+
+Job submission :
+curl --location 'https://async-infer-platform.stage.walmart.com/job_publisher/submit_async_job' \
+--header 'Content-Type: application/json' \
+--header 'WM_SVC.NAME: BRAND_SAFETY_TEST' \
+--header 'WM_SVC.ENV: dev' \
+--header 'WM_CONSUMER.ID: 123e4567-e89b-12d3-a456-426614174000' \
+--data '{
+    "model_name": "cbs_brand_safety",
+    "model_version": -1,
+    "input_path": "gs://cbs-evaluation/input/",
+    "queue": "dev",
+    "output_config": {
+        "destination_folder_path": "gs://cbs-evaluation/output/"
+    },
+    "callback_config":{
+        "callback_type": "API",
+        "callback_path": "https://cbs-content-mcp-server.cbs-mcp.dev.k8s.walmart.net/api/eval-callback"
+    }
+}'
+
+
+Job Status check :
+curl --location 'https://async-infer-platform.stage.walmart.com/job_publisher/describe_job_status?job_id=d6542ffc_e94a_44dd_a62e_f437146b9429' \
+--header 'WM_SVC.NAME: BRAND_SAFETY_TEST' \
+--header 'WM_SVC.ENV: prod' \
+--header 'WM_CONSUMER.ID: 123e4567-e89b-12d3-a456-426614174000' \
+
+
+MDS input.json sample :
+{
+  "publisher_identifiers": {
+    "publisher_id": "test-publisher-1772834724",
+    "platform_name": "manual_upload",
+    "tenant": "martech",
+    "download_time": 1772834724,
+    "create_time": 1772834724
+  },
+  "publisher_status": "active",
+  "download_time": 1772834724,
+  "create_time": 1772834724,
+  "inputs": [
+    {
+      "post_identifiers": {
+        "post_id": "req_eval_1772834724_001"
+      },
+      "post_status": "active",
+      "create_time": 1772834724,
+      "download_time": 1772834724,
+      "post_components": [],
+      "media": [
+        {
+          "media_identifiers": {
+            "media_id": "med_eval_1772834724_001"
+          },
+          "type": "image",
+          "media_components": [
+            {
+              "name": "main",
+              "content": "gs://cbs-evaluation/input/asset_eval_1.jpg"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "post_identifiers": {
+        "post_id": "req_eval_1772834724_002"
+      },
+      "post_status": "active",
+      "create_time": 1772834724,
+      "download_time": 1772834724,
+      "post_components": [],
+      "media": [
+        {
+          "media_identifiers": {
+            "media_id": "med_eval_1772834724_002"
+          },
+          "type": "image",
+          "media_components": [
+            {
+              "name": "main",
+              "content": "gs://cbs-evaluation/input/asset_eval_2.jpg"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "post_identifiers": {
+        "post_id": "req_eval_1772834724_003"
+      },
+      "post_status": "active",
+      "create_time": 1772834724,
+      "download_time": 1772834724,
+      "post_components": [],
+      "media": [
+        {
+          "media_identifiers": {
+            "media_id": "med_eval_1772834724_003"
+          },
+          "type": "image",
+          "media_components": [
+            {
+              "name": "main",
+              "content": "gs://cbs-evaluation/input/asset_eval_3.jpg"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "post_identifiers": {
+        "post_id": "req_eval_1772834724_004"
+      },
+      "post_status": "active",
+      "create_time": 1772834724,
+      "download_time": 1772834724,
+      "post_components": [],
+      "media": [
+        {
+          "media_identifiers": {
+            "media_id": "med_eval_1772834724_004"
+          },
+          "type": "image",
+          "media_components": [
+            {
+              "name": "main",
+              "content": "gs://cbs-evaluation/input/asset_eval_4.jpg"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "post_identifiers": {
+        "post_id": "req_eval_1772834724_005"
+      },
+      "post_status": "active",
+      "create_time": 1772834724,
+      "download_time": 1772834724,
+      "post_components": [],
+      "media": [
+        {
+          "media_identifiers": {
+            "media_id": "med_eval_1772834724_005"
+          },
+          "type": "image",
+          "media_components": [
+            {
+              "name": "main",
+              "content": "gs://cbs-evaluation/input/asset_eval_5.jpg"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "post_identifiers": {
+        "post_id": "req_eval_1772834724_006"
+      },
+      "post_status": "active",
+      "create_time": 1772834724,
+      "download_time": 1772834724,
+      "post_components": [],
+      "media": [
+        {
+          "media_identifiers": {
+            "media_id": "med_eval_1772834724_006"
+          },
+          "type": "image",
+          "media_components": [
+            {
+              "name": "main",
+              "content": "gs://cbs-evaluation/input/asset_eval_6.jpg"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
+
+
+MDS response sample :
+File location : gs://cbs-evaluation/output/d6542ffc_e94a_44dd_a62e_f437146b9429/input.json
+
+{
+    "publisher_identifiers": {
+        "publisher_id": "test-publisher-1772834724",
+        "platform_name": "manual_upload",
+        "tenant": "martech",
+        "download_time": 1772834724,
+        "create_time": 1772834724
+    },
+    "publisher_status": "active",
+    "download_time": 1772834724,
+    "create_time": 1772834724,
+    "outputs": [
+        {
+            "create_time": 1772834724,
+            "media": [
+                {
+                    "derived_components": [
+                        {
+                            "content": [
+                                {
+                                    "text": "Christmas Week at SamsClub Walmad Dont Shop Now We like puns and Single body Emoji"
+                                }
+                            ],
+                            "name": "main",
+                            "type": "text_image",
+                            "violation": [],
+                            "walmart_affiliation": []
+                        }
+                    ],
+                    "media_components": [
+                        {
+                            "content": "gs://cbs-evaluation/input/asset_eval_1.jpg",
+                            "name": "main",
+                            "type": "image",
+                            "violation": [
+                                {
+                                    "name": "color-contrast",
+                                    "score": 0.98
+                                },
+                                {
+                                    "name": "color-logo",
+                                    "score": 0.95
+                                },
+                                {
+                                    "name": "brand personality-conversational",
+                                    "score": 0.9
+                                },
+                                {
+                                    "name": "brand personality-captivating",
+                                    "score": 0.9
+                                },
+                                {
+                                    "name": "brand personality-confident",
+                                    "score": 0.9
+                                },
+                                {
+                                    "name": "voice and tone-no marketingese",
+                                    "score": 0.8
+                                },
+                                {
+                                    "name": "voice and tone-contractions",
+                                    "score": 0.9
+                                },
+                                {
+                                    "name": "voice and tone-first person",
+                                    "score": 0.7
+                                },
+                                {
+                                    "name": "voice and tone-ctas",
+                                    "score": 0.9
+                                },
+                                {
+                                    "name": "casing and formatting-casing",
+                                    "score": 0.9
+                                },
+                                {
+                                    "name": "program name",
+                                    "score": 0.8
+                                },
+                                {
+                                    "name": "spelling",
+                                    "score": 0.9
+                                }
+                            ]
+                        }
+                    ],
+                    "media_identifiers": {
+                        "media_id": "med_eval_1772834724_001"
+                    }
+                }
+            ],
+            "post_components": [],
+            "post_identifiers": {
+                "post_id": "req_eval_1772834724_001"
+            },
+            "post_moderation_result": {
+                "copyright_detail": [],
+                "ftc_compliant": false,
+                "is_violation": true,
+                "sentiment": "neutral",
+                "violation_detail": [
+                    {
+                        "count": 1,
+                        "name": "color-contrast",
+                        "score": 0.98
+                    },
+                    {
+                        "count": 1,
+                        "name": "color-logo",
+                        "score": 0.95
+                    },
+                    {
+                        "count": 1,
+                        "name": "brand personality-conversational",
+                        "score": 0.9
+                    },
+                    {
+                        "count": 1,
+                        "name": "brand personality-captivating",
+                        "score": 0.9
+                    },
+                    {
+                        "count": 1,
+                        "name": "brand personality-confident",
+                        "score": 0.9
+                    },
+                    {
+                        "count": 1,
+                        "name": "voice and tone-no marketingese",
+                        "score": 0.8
+                    },
+                    {
+                        "count": 1,
+                        "name": "voice and tone-contractions",
+                        "score": 0.9
+                    },
+                    {
+                        "count": 1,
+                        "name": "voice and tone-first person",
+                        "score": 0.7
+                    },
+                    {
+                        "count": 1,
+                        "name": "voice and tone-ctas",
+                        "score": 0.9
+                    },
+                    {
+                        "count": 1,
+                        "name": "casing and formatting-casing",
+                        "score": 0.9
+                    },
+                    {
+                        "count": 1,
+                        "name": "program name",
+                        "score": 0.8
+                    },
+                    {
+                        "count": 1,
+                        "name": "spelling",
+                        "score": 0.9
+                    }
+                ],
+                "walmart_affiliation": false
+            },
+            "post_status": "active"
+        },
+        {
+            "create_time": 1772834724,
+            "media": [
+                {
+                    "derived_components": [
+                        {
+                            "content": [
+                                {
+                                    "text": "Christmas Week at SamsClub Walma Dont Shop Now Welike punsand Single body Emoji"
+                                }
+                            ],
+                            "name": "main",
+                            "type": "text_image",
+                            "violation": [],
+                            "walmart_affiliation": []
+                        }
+                    ],
+                    "media_components": [
+                        {
+                            "content": "gs://cbs-evaluation/input/asset_eval_2.jpg",
+                            "name": "main",
+                            "type": "image",
+                            "violation": [
+                                {
+                                    "name": "color-contrast",
+                                    "score": 0.9
+                                },
+                                {
+                                    "name": "color-logo",
+                                    "score": 0.95
+                                },
+                                {
+                                    "name": "brand personality-conversational",
+                                    "score": 0.9
+                                },
+                                {
+                                    "name": "brand personality-captivating",
+                                    "score": 0.9
+                                },
+                                {
+                                    "name": "brand personality-confident",
+                                    "score": 0.9
+                                },
+                                {
+                                    "name": "voice and tone-no marketingese",
+                                    "score": 0.9
+                                },
+                                {
+                                    "name": "voice and tone-contractions",
+                                    "score": 0.9
+                                },
+                                {
+                                    "name": "voice and tone-first person",
+                                    "score": 0.8
+                                },
+                                {
+                                    "name": "voice and tone-ctas",
+                                    "score": 0.9
+                                },
+                                {
+                                    "name": "casing and formatting-casing",
+                                    "score": 0.9
+                                },
+                                {
+                                    "name": "casing and formatting-formatting",
+                                    "score": 0.8
+                                },
+                                {
+                                    "name": "spelling",
+                                    "score": 0.9
+                                }
+                            ]
+                        }
+                    ],
+                    "media_identifiers": {
+                        "media_id": "med_eval_1772834724_002"
+                    }
+                }
+            ],
+            "post_components": [],
+            "post_identifiers": {
+                "post_id": "req_eval_1772834724_002"
+            },
+            "post_moderation_result": {
+                "copyright_detail": [],
+                "ftc_compliant": false,
+                "is_violation": true,
+                "sentiment": "neutral",
+                "violation_detail": [
+                    {
+                        "count": 1,
+                        "name": "color-contrast",
+                        "score": 0.9
+                    },
+                    {
+                        "count": 1,
+                        "name": "color-logo",
+                        "score": 0.95
+                    },
+                    {
+                        "count": 1,
+                        "name": "brand personality-conversational",
+                        "score": 0.9
+                    },
+                    {
+                        "count": 1,
+                        "name": "brand personality-captivating",
+                        "score": 0.9
+                    },
+                    {
+                        "count": 1,
+                        "name": "brand personality-confident",
+                        "score": 0.9
+                    },
+                    {
+                        "count": 1,
+                        "name": "voice and tone-no marketingese",
+                        "score": 0.9
+                    },
+                    {
+                        "count": 1,
+                        "name": "voice and tone-contractions",
+                        "score": 0.9
+                    },
+                    {
+                        "count": 1,
+                        "name": "voice and tone-first person",
+                        "score": 0.8
+                    },
+                    {
+                        "count": 1,
+                        "name": "voice and tone-ctas",
+                        "score": 0.9
+                    },
+                    {
+                        "count": 1,
+                        "name": "casing and formatting-casing",
+                        "score": 0.9
+                    },
+                    {
+                        "count": 1,
+                        "name": "casing and formatting-formatting",
+                        "score": 0.8
+                    },
+                    {
+                        "count": 1,
+                        "name": "spelling",
+                        "score": 0.9
+                    }
+                ],
+                "walmart_affiliation": false
+            },
+            "post_status": "active"
+        },
+        {
+            "create_time": 1772834724,
+            "media": [
+                {
+                    "derived_components": [
+                        {
+                            "content": [
+                                {
+                                    "text": "Christmas Week at SamsClub Walmart Dont Shop Now Welike punsand Single body Emoji"
+                                }
+                            ],
+                            "name": "main",
+                            "type": "text_image",
+                            "violation": [],
+                            "walmart_affiliation": [
+                                {
+                                    "evidience": {
+                                        "related_words": [
+                                            "walmart"
+                                        ]
+                                    }
+                                }
+                            ]
+                        }
+                    ],
+                    "media_components": [
+                        {
+                            "content": "gs://cbs-evaluation/input/asset_eval_3.jpg",
+                            "name": "main",
+                            "type": "image",
+                            "violation": [
+                                {
+                                    "name": "brand personality-conversational",
+                                    "score": 0.9
+                                },
+                                {
+                                    "name": "brand personality-captivating",
+                                    "score": 0.9
+                                },
+                                {
+                                    "name": "brand personality-confident",
+                                    "score": 0.9
+                                },
+                                {
+                                    "name": "voice and tone-no marketingese",
+                                    "score": 0.9
+                                },
+                                {
+                                    "name": "voice and tone-contractions",
+                                    "score": 0.9
+                                },
+                                {
+                                    "name": "voice and tone-ctas",
+                                    "score": 0.9
+                                },
+                                {
+                                    "name": "casing and formatting-casing",
+                                    "score": 0.9
+                                },
+                                {
+                                    "name": "spelling",
+                                    "score": 0.9
+                                }
+                            ]
+                        }
+                    ],
+                    "media_identifiers": {
+                        "media_id": "med_eval_1772834724_003"
+                    }
+                }
+            ],
+            "post_components": [],
+            "post_identifiers": {
+                "post_id": "req_eval_1772834724_003"
+            },
+            "post_moderation_result": {
+                "copyright_detail": [],
+                "ftc_compliant": false,
+                "is_violation": true,
+                "sentiment": "neutral",
+                "violation_detail": [
+                    {
+                        "count": 1,
+                        "name": "brand personality-conversational",
+                        "score": 0.9
+                    },
+                    {
+                        "count": 1,
+                        "name": "brand personality-captivating",
+                        "score": 0.9
+                    },
+                    {
+                        "count": 1,
+                        "name": "brand personality-confident",
+                        "score": 0.9
+                    },
+                    {
+                        "count": 1,
+                        "name": "voice and tone-no marketingese",
+                        "score": 0.9
+                    },
+                    {
+                        "count": 1,
+                        "name": "voice and tone-contractions",
+                        "score": 0.9
+                    },
+                    {
+                        "count": 1,
+                        "name": "voice and tone-ctas",
+                        "score": 0.9
+                    },
+                    {
+                        "count": 1,
+                        "name": "casing and formatting-casing",
+                        "score": 0.9
+                    },
+                    {
+                        "count": 1,
+                        "name": "spelling",
+                        "score": 0.9
+                    }
+                ],
+                "walmart_affiliation": true
+            },
+            "post_status": "active"
+        },
+        {
+            "create_time": 1772834724,
+            "media": [
+                {
+                    "derived_components": [
+                        {
+                            "content": [
+                                {
+                                    "text": "Christmas Week at SamsClub Walmart Dont Shop Now Welike punsand Single body Emoji"
+                                }
+                            ],
+                            "name": "main",
+                            "type": "text_image",
+                            "violation": [],
+                            "walmart_affiliation": [
+                                {
+                                    "evidience": {
+                                        "related_words": [
+                                            "walmart"
+                                        ]
+                                    }
+                                }
+                            ]
+                        }
+                    ],
+                    "media_components": [
+                        {
+                            "content": "gs://cbs-evaluation/input/asset_eval_4.jpg",
+                            "name": "main",
+                            "type": "image",
+                            "violation": [
+                                {
+                                    "name": "brand personality-conversational",
+                                    "score": 0.9
+                                },
+                                {
+                                    "name": "brand personality-captivating",
+                                    "score": 0.9
+                                },
+                                {
+                                    "name": "brand personality-confident",
+                                    "score": 0.9
+                                },
+                                {
+                                    "name": "voice and tone-no marketingese",
+                                    "score": 0.9
+                                },
+                                {
+                                    "name": "voice and tone-contractions",
+                                    "score": 1.0
+                                },
+                                {
+                                    "name": "voice and tone-first person",
+                                    "score": 0.8
+                                },
+                                {
+                                    "name": "voice and tone-ctas",
+                                    "score": 0.9
+                                },
+                                {
+                                    "name": "casing and formatting-casing",
+                                    "score": 0.9
+                                },
+                                {
+                                    "name": "casing and formatting-formatting",
+                                    "score": 0.8
+                                },
+                                {
+                                    "name": "spelling",
+                                    "score": 0.9
+                                }
+                            ]
+                        }
+                    ],
+                    "media_identifiers": {
+                        "media_id": "med_eval_1772834724_004"
+                    }
+                }
+            ],
+            "post_components": [],
+            "post_identifiers": {
+                "post_id": "req_eval_1772834724_004"
+            },
+            "post_moderation_result": {
+                "copyright_detail": [],
+                "ftc_compliant": false,
+                "is_violation": true,
+                "sentiment": "neutral",
+                "violation_detail": [
+                    {
+                        "count": 1,
+                        "name": "brand personality-conversational",
+                        "score": 0.9
+                    },
+                    {
+                        "count": 1,
+                        "name": "brand personality-captivating",
+                        "score": 0.9
+                    },
+                    {
+                        "count": 1,
+                        "name": "brand personality-confident",
+                        "score": 0.9
+                    },
+                    {
+                        "count": 1,
+                        "name": "voice and tone-no marketingese",
+                        "score": 0.9
+                    },
+                    {
+                        "count": 1,
+                        "name": "voice and tone-contractions",
+                        "score": 1.0
+                    },
+                    {
+                        "count": 1,
+                        "name": "voice and tone-first person",
+                        "score": 0.8
+                    },
+                    {
+                        "count": 1,
+                        "name": "voice and tone-ctas",
+                        "score": 0.9
+                    },
+                    {
+                        "count": 1,
+                        "name": "casing and formatting-casing",
+                        "score": 0.9
+                    },
+                    {
+                        "count": 1,
+                        "name": "casing and formatting-formatting",
+                        "score": 0.8
+                    },
+                    {
+                        "count": 1,
+                        "name": "spelling",
+                        "score": 0.9
+                    }
+                ],
+                "walmart_affiliation": true
+            },
+            "post_status": "active"
+        },
+        {
+            "create_time": 1772834724,
+            "media": [
+                {
+                    "derived_components": [
+                        {
+                            "content": [
+                                {
+                                    "text": "Smoking is fun? Walmart Dont Shop Now Subjecttoavailability Restrictions & fees apply"
+                                }
+                            ],
+                            "name": "main",
+                            "type": "text_image",
+                            "violation": [],
+                            "walmart_affiliation": [
+                                {
+                                    "evidience": {
+                                        "related_words": [
+                                            "walmart"
+                                        ]
+                                    }
+                                }
+                            ]
+                        }
+                    ],
+                    "media_components": [
+                        {
+                            "content": "gs://cbs-evaluation/input/asset_eval_5.jpg",
+                            "name": "main",
+                            "type": "image",
+                            "violation": [
+                                {
+                                    "name": "brand personality-grassroots",
+                                    "score": 1.0
+                                },
+                                {
+                                    "name": "brand personality-agile",
+                                    "score": 1.0
+                                },
+                                {
+                                    "name": "brand personality-pioneering",
+                                    "score": 1.0
+                                },
+                                {
+                                    "name": "brand personality-conversational",
+                                    "score": 1.0
+                                },
+                                {
+                                    "name": "brand personality-captivating",
+                                    "score": 1.0
+                                },
+                                {
+                                    "name": "brand personality-confident",
+                                    "score": 1.0
+                                },
+                                {
+                                    "name": "voice and tone-no marketingese",
+                                    "score": 0.9
+                                },
+                                {
+                                    "name": "voice and tone-contractions",
+                                    "score": 1.0
+                                },
+                                {
+                                    "name": "voice and tone-ctas",
+                                    "score": 1.0
+                                },
+                                {
+                                    "name": "casing and formatting-casing",
+                                    "score": 1.0
+                                },
+                                {
+                                    "name": "casing and formatting-formatting",
+                                    "score": 0.9
+                                },
+                                {
+                                    "name": "spelling",
+                                    "score": 1.0
+                                }
+                            ]
+                        }
+                    ],
+                    "media_identifiers": {
+                        "media_id": "med_eval_1772834724_005"
+                    }
+                }
+            ],
+            "post_components": [],
+            "post_identifiers": {
+                "post_id": "req_eval_1772834724_005"
+            },
+            "post_moderation_result": {
+                "copyright_detail": [],
+                "ftc_compliant": false,
+                "is_violation": true,
+                "sentiment": "neutral",
+                "violation_detail": [
+                    {
+                        "count": 1,
+                        "name": "brand personality-grassroots",
+                        "score": 1.0
+                    },
+                    {
+                        "count": 1,
+                        "name": "brand personality-agile",
+                        "score": 1.0
+                    },
+                    {
+                        "count": 1,
+                        "name": "brand personality-pioneering",
+                        "score": 1.0
+                    },
+                    {
+                        "count": 1,
+                        "name": "brand personality-conversational",
+                        "score": 1.0
+                    },
+                    {
+                        "count": 1,
+                        "name": "brand personality-captivating",
+                        "score": 1.0
+                    },
+                    {
+                        "count": 1,
+                        "name": "brand personality-confident",
+                        "score": 1.0
+                    },
+                    {
+                        "count": 1,
+                        "name": "voice and tone-no marketingese",
+                        "score": 0.9
+                    },
+                    {
+                        "count": 1,
+                        "name": "voice and tone-contractions",
+                        "score": 1.0
+                    },
+                    {
+                        "count": 1,
+                        "name": "voice and tone-ctas",
+                        "score": 1.0
+                    },
+                    {
+                        "count": 1,
+                        "name": "casing and formatting-casing",
+                        "score": 1.0
+                    },
+                    {
+                        "count": 1,
+                        "name": "casing and formatting-formatting",
+                        "score": 0.9
+                    },
+                    {
+                        "count": 1,
+                        "name": "spelling",
+                        "score": 1.0
+                    }
+                ],
+                "walmart_affiliation": true
+            },
+            "post_status": "active"
+        },
+        {
+            "create_time": 1772834724,
+            "media": [
+                {
+                    "derived_components": [
+                        {
+                            "content": [
+                                {
+                                    "text": "Smoking is fun? Walmart Shop now Subjecttoavailability Restrictions & fees apply"
+                                }
+                            ],
+                            "name": "main",
+                            "type": "text_image",
+                            "violation": [],
+                            "walmart_affiliation": [
+                                {
+                                    "evidience": {
+                                        "related_words": [
+                                            "walmart"
+                                        ]
+                                    }
+                                }
+                            ]
+                        }
+                    ],
+                    "media_components": [
+                        {
+                            "content": "gs://cbs-evaluation/input/asset_eval_6.jpg",
+                            "name": "main",
+                            "type": "image",
+                            "violation": [
+                                {
+                                    "name": "drugs & tobacco-drug product",
+                                    "score": 0.62
+                                },
+                                {
+                                    "name": "brand personality-grassroots",
+                                    "score": 1.0
+                                },
+                                {
+                                    "name": "brand personality-pioneering",
+                                    "score": 1.0
+                                },
+                                {
+                                    "name": "brand personality-conversational",
+                                    "score": 1.0
+                                },
+                                {
+                                    "name": "brand personality-captivating",
+                                    "score": 1.0
+                                },
+                                {
+                                    "name": "brand personality-confident",
+                                    "score": 1.0
+                                },
+                                {
+                                    "name": "voice and tone-no marketingese",
+                                    "score": 1.0
+                                }
+                            ]
+                        }
+                    ],
+                    "media_identifiers": {
+                        "media_id": "med_eval_1772834724_006"
+                    }
+                }
+            ],
+            "post_components": [],
+            "post_identifiers": {
+                "post_id": "req_eval_1772834724_006"
+            },
+            "post_moderation_result": {
+                "copyright_detail": [],
+                "ftc_compliant": false,
+                "is_violation": true,
+                "sentiment": "neutral",
+                "violation_detail": [
+                    {
+                        "count": 1,
+                        "name": "drugs & tobacco-drug product",
+                        "score": 0.62
+                    },
+                    {
+                        "count": 1,
+                        "name": "brand personality-grassroots",
+                        "score": 1.0
+                    },
+                    {
+                        "count": 1,
+                        "name": "brand personality-pioneering",
+                        "score": 1.0
+                    },
+                    {
+                        "count": 1,
+                        "name": "brand personality-conversational",
+                        "score": 1.0
+                    },
+                    {
+                        "count": 1,
+                        "name": "brand personality-captivating",
+                        "score": 1.0
+                    },
+                    {
+                        "count": 1,
+                        "name": "brand personality-confident",
+                        "score": 1.0
+                    },
+                    {
+                        "count": 1,
+                        "name": "voice and tone-no marketingese",
+                        "score": 1.0
+                    }
+                ],
+                "walmart_affiliation": true
+            },
+            "post_status": "active"
+        }
+    ]
+}
+
+

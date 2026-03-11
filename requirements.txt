@@ -1,0 +1,13 @@
+# Python dependencies for Camunda 8 Workers
+
+# Zeebe Python Client
+pyzeebe==4.1.0
+
+# HTTP client for MCP Server
+requests==2.31.0
+
+# Async support
+asyncio==3.4.3
+
+# Logging
+python-json-logger==2.0.7

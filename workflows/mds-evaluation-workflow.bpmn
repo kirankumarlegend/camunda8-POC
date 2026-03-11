@@ -1,0 +1,196 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" 
+                  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" 
+                  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" 
+                  xmlns:zeebe="http://camunda.org/schema/zeebe/1.0" 
+                  xmlns:di="http://www.omg.org/spec/DD/20100524/DI" 
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+                  xmlns:modeler="http://camunda.org/schema/modeler/1.0" 
+                  id="Definitions_1" 
+                  targetNamespace="http://bpmn.io/schema/bpmn" 
+                  exporter="Camunda Modeler" 
+                  exporterVersion="5.14.0" 
+                  modeler:executionPlatform="Camunda Cloud" 
+                  modeler:executionPlatformVersion="8.5.0">
+  
+  <bpmn:process id="mds-evaluation-workflow" name="MDS Asset Evaluation Workflow" isExecutable="true">
+    
+    <!-- Start Event -->
+    <bpmn:startEvent id="StartEvent_Upload" name="User Uploads Assets">
+      <bpmn:outgoing>Flow_ToValidate</bpmn:outgoing>
+    </bpmn:startEvent>
+    
+    <!-- Task 1: Validate Assets -->
+    <bpmn:serviceTask id="Task_ValidateAssets" name="Validate Asset Filenames">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="validate-asset-filenames" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_ToValidate</bpmn:incoming>
+      <bpmn:outgoing>Flow_ToUpload</bpmn:outgoing>
+    </bpmn:serviceTask>
+    
+    <!-- Task 2: Upload to AEM + GCS -->
+    <bpmn:serviceTask id="Task_UploadAssets" name="Upload to AEM &#38; GCS">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="upload-assets-aem-gcs" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_ToUpload</bpmn:incoming>
+      <bpmn:outgoing>Flow_ToStoreMetadata</bpmn:outgoing>
+    </bpmn:serviceTask>
+    
+    <!-- Task 3: Store Job Metadata in Postgres -->
+    <bpmn:serviceTask id="Task_StoreJobMetadata" name="Store Job Metadata (Postgres)">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="store-job-metadata" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_ToStoreMetadata</bpmn:incoming>
+      <bpmn:outgoing>Flow_ToBuildInput</bpmn:outgoing>
+    </bpmn:serviceTask>
+    
+    <!-- Task 4: Build input.json -->
+    <bpmn:serviceTask id="Task_BuildInputJson" name="Build input.json for MDS">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="build-mds-input-json" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_ToBuildInput</bpmn:incoming>
+      <bpmn:outgoing>Flow_ToSubmitMDS</bpmn:outgoing>
+    </bpmn:serviceTask>
+    
+    <!-- Task 5: Submit to MDS API -->
+    <bpmn:serviceTask id="Task_SubmitMDS" name="Submit Async Job to MDS">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="submit-mds-job" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_ToSubmitMDS</bpmn:incoming>
+      <bpmn:outgoing>Flow_ToWaitCallback</bpmn:outgoing>
+    </bpmn:serviceTask>
+    
+    <!-- Intermediate Event: Wait for MDS Callback -->
+    <bpmn:intermediateCatchEvent id="Event_WaitMDSCallback" name="Wait for MDS Callback">
+      <bpmn:extensionElements>
+        <zeebe:ioMapping>
+          <zeebe:output source="=mdsJobId" target="mdsJobId" />
+        </zeebe:ioMapping>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_ToWaitCallback</bpmn:incoming>
+      <bpmn:outgoing>Flow_ToPostprocess</bpmn:outgoing>
+      <bpmn:messageEventDefinition messageRef="Message_MDSCallback" />
+    </bpmn:intermediateCatchEvent>
+    
+    <!-- Task 6: Postprocess MDS Results -->
+    <bpmn:serviceTask id="Task_PostprocessResults" name="Postprocess &#38; Calculate Scores">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="postprocess-mds-results" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_ToPostprocess</bpmn:incoming>
+      <bpmn:outgoing>Flow_ToReview</bpmn:outgoing>
+    </bpmn:serviceTask>
+    
+    <!-- Task 7: Human Review Task -->
+    <bpmn:userTask id="Task_HumanReview" name="Review &#38; Approve Assets">
+      <bpmn:extensionElements>
+        <zeebe:assignmentDefinition assignee="reviewer" />
+        <zeebe:formDefinition formKey="camunda-forms:bpmn:reviewForm" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_ToReview</bpmn:incoming>
+      <bpmn:outgoing>Flow_ToDecision</bpmn:outgoing>
+    </bpmn:userTask>
+    
+    <!-- Gateway: Review Decision -->
+    <bpmn:exclusiveGateway id="Gateway_ReviewDecision" name="Approved?">
+      <bpmn:incoming>Flow_ToDecision</bpmn:incoming>
+      <bpmn:outgoing>Flow_Approved</bpmn:outgoing>
+      <bpmn:outgoing>Flow_NeedsFeedback</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Rejected</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    
+    <!-- Task 8a: Store Feedback (if needs changes) -->
+    <bpmn:serviceTask id="Task_StoreFeedback" name="Store Reviewer Feedback">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="store-asset-feedback" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_NeedsFeedback</bpmn:incoming>
+      <bpmn:outgoing>Flow_BackToReview</bpmn:outgoing>
+    </bpmn:serviceTask>
+    
+    <!-- Task 8b: Update Status to Approved -->
+    <bpmn:serviceTask id="Task_ApproveAssets" name="Mark Assets as Approved">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="approve-assets" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_Approved</bpmn:incoming>
+      <bpmn:outgoing>Flow_ToPublish</bpmn:outgoing>
+    </bpmn:serviceTask>
+    
+    <!-- Task 8c: Update Status to Rejected -->
+    <bpmn:serviceTask id="Task_RejectAssets" name="Mark Assets as Rejected">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="reject-assets" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_Rejected</bpmn:incoming>
+      <bpmn:outgoing>Flow_ToEnd</bpmn:outgoing>
+    </bpmn:serviceTask>
+    
+    <!-- Task 9: Publish/Export Assets -->
+    <bpmn:serviceTask id="Task_PublishAssets" name="Publish Approved Assets">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="publish-approved-assets" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_ToPublish</bpmn:incoming>
+      <bpmn:outgoing>Flow_ToComplete</bpmn:outgoing>
+    </bpmn:serviceTask>
+    
+    <!-- End Events -->
+    <bpmn:endEvent id="EndEvent_Published" name="Assets Published">
+      <bpmn:incoming>Flow_ToComplete</bpmn:incoming>
+    </bpmn:endEvent>
+    
+    <bpmn:endEvent id="EndEvent_Rejected" name="Assets Rejected">
+      <bpmn:incoming>Flow_ToEnd</bpmn:incoming>
+    </bpmn:endEvent>
+    
+    <!-- Sequence Flows -->
+    <bpmn:sequenceFlow id="Flow_ToValidate" sourceRef="StartEvent_Upload" targetRef="Task_ValidateAssets" />
+    <bpmn:sequenceFlow id="Flow_ToUpload" sourceRef="Task_ValidateAssets" targetRef="Task_UploadAssets" />
+    <bpmn:sequenceFlow id="Flow_ToStoreMetadata" sourceRef="Task_UploadAssets" targetRef="Task_StoreJobMetadata" />
+    <bpmn:sequenceFlow id="Flow_ToBuildInput" sourceRef="Task_StoreJobMetadata" targetRef="Task_BuildInputJson" />
+    <bpmn:sequenceFlow id="Flow_ToSubmitMDS" sourceRef="Task_BuildInputJson" targetRef="Task_SubmitMDS" />
+    <bpmn:sequenceFlow id="Flow_ToWaitCallback" sourceRef="Task_SubmitMDS" targetRef="Event_WaitMDSCallback" />
+    <bpmn:sequenceFlow id="Flow_ToPostprocess" sourceRef="Event_WaitMDSCallback" targetRef="Task_PostprocessResults" />
+    <bpmn:sequenceFlow id="Flow_ToReview" sourceRef="Task_PostprocessResults" targetRef="Task_HumanReview" />
+    <bpmn:sequenceFlow id="Flow_ToDecision" sourceRef="Task_HumanReview" targetRef="Gateway_ReviewDecision" />
+    
+    <bpmn:sequenceFlow id="Flow_Approved" name="Approved" sourceRef="Gateway_ReviewDecision" targetRef="Task_ApproveAssets">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=reviewDecision = "approved"</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    
+    <bpmn:sequenceFlow id="Flow_NeedsFeedback" name="Needs Changes" sourceRef="Gateway_ReviewDecision" targetRef="Task_StoreFeedback">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=reviewDecision = "feedback"</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    
+    <bpmn:sequenceFlow id="Flow_Rejected" name="Rejected" sourceRef="Gateway_ReviewDecision" targetRef="Task_RejectAssets">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=reviewDecision = "rejected"</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    
+    <bpmn:sequenceFlow id="Flow_BackToReview" sourceRef="Task_StoreFeedback" targetRef="Task_HumanReview" />
+    <bpmn:sequenceFlow id="Flow_ToPublish" sourceRef="Task_ApproveAssets" targetRef="Task_PublishAssets" />
+    <bpmn:sequenceFlow id="Flow_ToComplete" sourceRef="Task_PublishAssets" targetRef="EndEvent_Published" />
+    <bpmn:sequenceFlow id="Flow_ToEnd" sourceRef="Task_RejectAssets" targetRef="EndEvent_Rejected" />
+    
+  </bpmn:process>
+  
+  <!-- Message Definition for MDS Callback -->
+  <bpmn:message id="Message_MDSCallback" name="mds-callback">
+    <bpmn:extensionElements>
+      <zeebe:subscription correlationKey="=cbsJobId" />
+    </bpmn:extensionElements>
+  </bpmn:message>
+  
+  <!-- BPMN Diagram (optional but needed for Operate visualization) -->
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="mds-evaluation-workflow">
+      <!-- Diagram elements intentionally omitted - use Camunda Modeler to generate -->
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+  
+</bpmn:definitions>

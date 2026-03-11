@@ -1,0 +1,1899 @@
+{
+    "jsonrpc": "2.0",
+    "id": "list-tools",
+    "result": {
+        "tools": [
+            {
+                "name": "cbsmcpserver_list",
+                "description": "Get all cbsMcpServer.",
+                "inputSchema": {
+                    "additionalProperties": false,
+                    "properties": {},
+                    "type": "object"
+                },
+                "outputSchema": {
+                    "additionalProperties": true,
+                    "type": "object"
+                },
+                "_meta": {
+                    "fastmcp": {
+                        "tags": []
+                    }
+                }
+            },
+            {
+                "name": "cbsmcpserver_get_by_id",
+                "description": "Get a cbsMcpServer by ID.",
+                "inputSchema": {
+                    "additionalProperties": false,
+                    "properties": {
+                        "id": {
+                            "type": "string"
+                        }
+                    },
+                    "required": [
+                        "id"
+                    ],
+                    "type": "object"
+                },
+                "outputSchema": {
+                    "additionalProperties": true,
+                    "type": "object"
+                },
+                "_meta": {
+                    "fastmcp": {
+                        "tags": []
+                    }
+                }
+            },
+            {
+                "name": "scrape_url",
+                "description": "Scrapes a web page and extracts structured content from the __NEXT_DATA__ script.\n\n**Purpose**: Extract structured page data for content generation (FAQs, SEO, etc.)\n**Use Case**: First step before generating content - provides page context\n\nArgs:\n    url (str): Full URL of the page to scrape (e.g., \"https://www.walmart.com/ip/12345\")\n\nReturns:\n    Dict with:\n    - page_type (str): Type of page (e.g., \"product\", \"category\", \"browse\")\n    - scraped_data (dict): Structured page data including:\n        - title: Page title\n        - description: Meta description\n        - product_info: Product details (for product pages)\n        - category_info: Category details (for category pages)\n        - content: Main page content\n\nExample:\n    result = await scrape_url(\"https://www.walmart.com/ip/Electronics/12345\")\n    # Use result['scraped_data'] as page_context for generate_faqs\n\n**Agent Tip**: Always scrape the page first before generating content to ensure\naccurate, contextual generation based on actual page data.",
+                "inputSchema": {
+                    "additionalProperties": false,
+                    "properties": {
+                        "url": {
+                            "type": "string"
+                        }
+                    },
+                    "required": [
+                        "url"
+                    ],
+                    "type": "object"
+                },
+                "outputSchema": {
+                    "additionalProperties": true,
+                    "type": "object"
+                },
+                "_meta": {
+                    "fastmcp": {
+                        "tags": []
+                    }
+                }
+            },
+            {
+                "name": "generate_content",
+                "description": "Generates content using pre-defined prompt templates with page context.\n\n**Purpose**: Generate specific content types using production-tested templates\n**Use Case**: SEO titles, descriptions, meta tags, copy blocks\n\nArgs:\n    prompt_name (str): Template name to use. Available templates:\n        - 'generate_seo_title': SEO-optimized page title\n        - 'generate_seo_description': Meta description\n        - 'generate_product_copy': Product description\n        - 'generate_category_copy': Category page copy\n        (See prompt repository for full list)\n    \n    context (dict): Page data from scrape_url tool, must include:\n        - page_type: Type of page\n        - scraped_data: Structured page content\n    \n    model_name (str, optional): LLM model to use. Options:\n        - 'gpt-5-mini' (default, fast, cost-effective)\n        - 'gpt-4.1-mini' (more capable)\n        - 'gemini-2.5-flash' (Google's fast model)\n        - 'claude-sonnet-4@20250514' (Anthropic, high quality)\n        - 'claude-haiku-4-5@20251001' (Anthropic, fast)\n        - 'llama3-1-8b-instruct' (open source)\n\nReturns:\n    Dict with:\n    - generated_content (str): The generated text\n    - model_used (str): Model that generated the content\n    - error (str): Error message if generation failed\n\nExample:\n    page_data = await scrape_url(\"https://www.walmart.com/ip/12345\")\n    result = await generate_content(\n        prompt_name=\"generate_seo_title\",\n        context=page_data['scraped_data'],\n        model_name=\"gpt-5-mini\"\n    )\n    title = result['generated_content']\n\n**Agent Tip**: Use scrape_url first to get context, then pass scraped_data\nto this tool. Choose model based on quality/speed tradeoff.",
+                "inputSchema": {
+                    "additionalProperties": false,
+                    "properties": {
+                        "prompt_name": {
+                            "type": "string"
+                        },
+                        "context": {
+                            "additionalProperties": true,
+                            "type": "object"
+                        },
+                        "model_name": {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "default": null
+                        }
+                    },
+                    "required": [
+                        "prompt_name",
+                        "context"
+                    ],
+                    "type": "object"
+                },
+                "outputSchema": {
+                    "additionalProperties": true,
+                    "type": "object"
+                },
+                "_meta": {
+                    "fastmcp": {
+                        "tags": []
+                    }
+                }
+            },
+            {
+                "name": "generate_faqs",
+                "description": "Generate SEO-optimized, production-quality FAQs for Walmart product or category pages.\n\n**Use when**: You need to create FAQ content for a webpage to improve engagement, answer common customer questions, and boost SEO rankings.\n\n**Prerequisites**:\n    - Page context is REQUIRED. Call `scrape_url` first with the target page URL to obtain page_context (scraped_data).\n    - Pass the full scrape_url response as page_context to this tool.\n\n**Inputs**:\n    - page_context (dict, REQUIRED): Scraped page data from the `scrape_url` tool. Must include:\n        - page_type (str): Type of page — 'product', 'category', 'browse', etc.\n        - scraped_data (dict): Full page content with title, description, product_info or category_info.\n    - seed_questions (str, optional): Comma-separated seed questions to steer FAQ topics.\n        Example: \"What are the dimensions?, Is it waterproof?, What's included?\"\n    - model_name (str, optional): LLM model to use for generation.\n        Accepted values:\n            - 'gpt-5-mini' (default, best balance of speed and quality)\n            - 'gpt-4.1-mini' (higher quality, slower)\n            - 'claude-sonnet-4@20250514' (excellent for creative FAQs)\n            - 'gemini-2.5-flash' (Google, fast)\n    - num_faqs (int, optional): Number of FAQ pairs to generate. Default: 5. Range: 1–20.\n    - campaign_instructions (str, optional): Special instructions for campaign-specific FAQs.\n        Example: \"Focus on holiday gift-giving\", \"Emphasize sustainability\"\n\n**Returns**:\n    - faqs (list): Array of FAQ objects, each with:\n        - question (str): The FAQ question\n        - answer (str): Detailed answer\n    - error (str): Error message if generation failed\n\n**Example** (params only, see module docstring for full JSON-RPC wrapper):\n```json\n{\n    \"name\": \"generate_faqs\",\n    \"arguments\": {\n        \"page_context\": {\"page_type\": \"product\", \"scraped_data\": {\"title\": \"...\", \"description\": \"...\"}},\n        \"seed_questions\": \"What are the dimensions?, Is it waterproof?\",\n        \"num_faqs\": 7,\n        \"model_name\": \"gpt-5-mini\"\n    }\n}\n```\n\n**Workflow**:\n```\nStep 1: scrape_url(url=\"https://www.walmart.com/ip/12345\")\n        → returns page_context with scraped_data\nStep 2: generate_faqs(page_context=<scrape_url result>, num_faqs=7)\n        → returns {faqs: [{question, answer}, ...]}\nStep 3 (optional): evaluate_faqs(generated_faqs=<faqs>, page_context=<scrape_url result>)\n        → returns quality scores and consensus verdict\n```\n\n**Retry**: Safe to retry on network/timeout errors. If FAQs are low quality, adjust seed_questions or campaign_instructions and regenerate.\n\n**Related**: scrape_url (prerequisite), evaluate_faqs (quality check), evaluate_content (general evaluator)",
+                "inputSchema": {
+                    "additionalProperties": false,
+                    "properties": {
+                        "page_context": {
+                            "additionalProperties": true,
+                            "type": "object"
+                        },
+                        "seed_questions": {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "default": null
+                        },
+                        "model_name": {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "default": null
+                        },
+                        "num_faqs": {
+                            "anyOf": [
+                                {
+                                    "type": "integer"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "default": 5
+                        },
+                        "campaign_instructions": {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "default": ""
+                        }
+                    },
+                    "required": [
+                        "page_context"
+                    ],
+                    "type": "object"
+                },
+                "outputSchema": {
+                    "additionalProperties": true,
+                    "type": "object"
+                },
+                "_meta": {
+                    "fastmcp": {
+                        "tags": []
+                    }
+                }
+            },
+            {
+                "name": "evaluate_faqs",
+                "description": "Evaluate generated FAQ quality using multi-model consensus (GPT, Gemini, Claude) for production readiness.\n\n**Use when**: You have generated FAQs (from `generate_faqs`) and need to validate quality, accuracy, and relevance before publishing.\n\n**Prerequisites**:\n    - Generated FAQs are REQUIRED. Call `generate_faqs` first to produce FAQ pairs.\n    - Page context is REQUIRED. Use the same `scrape_url` result that was passed to `generate_faqs`.\n    - Typical workflow: scrape_url → generate_faqs → evaluate_faqs.\n\n**Inputs**:\n    - generated_faqs (list, REQUIRED): Array of FAQ objects to evaluate. Each must have:\n        - question (str): The FAQ question\n        - answer (str): The FAQ answer\n        Example: [{\"question\": \"What is...?\", \"answer\": \"It is...\"}]\n    - page_context (dict, REQUIRED): Original scraped page data from `scrape_url`. Used to verify FAQ accuracy against source content.\n    - evaluation_models (list, optional): List of model names to use for multi-model evaluation.\n        Default: ['gpt-5-mini', 'gemini-2.5-flash', 'claude-sonnet-4@20250514']\n        Tip: Use 3+ models for reliable consensus scoring.\n\n**Returns**:\n    - consensus_verdict (str): 'approved' or 'needs_revision'\n    - overall_score (float): Average score across all models (0–10)\n    - model_evaluations (list): Per-model evaluation results:\n        - model_name (str): Model that evaluated\n        - score (float): Quality score (0–10)\n        - verdict (str): 'approved' or 'needs_revision'\n        - feedback (str): Detailed feedback\n        - issues (list): Specific problems found\n    - recommendations (list): Suggested improvements\n\n**Example** (params only, see module docstring for full JSON-RPC wrapper):\n```json\n{\n    \"name\": \"evaluate_faqs\",\n    \"arguments\": {\n        \"generated_faqs\": [{\"question\": \"What sizes are available?\", \"answer\": \"Available in S, M, L, XL.\"}],\n        \"page_context\": {\"page_type\": \"product\", \"scraped_data\": {\"title\": \"...\"}},\n        \"evaluation_models\": [\"gpt-5-mini\", \"gemini-2.5-flash\", \"claude-sonnet-4@20250514\"]\n    }\n}\n```\n\n**Workflow**:\n```\nStep 1: scrape_url(url=\"https://www.walmart.com/ip/12345\") → page_context\nStep 2: generate_faqs(page_context=<step1 result>, num_faqs=5) → {faqs: [...]}\nStep 3: evaluate_faqs(generated_faqs=<step2 faqs>, page_context=<step1 result>)\n        → {consensus_verdict: 'approved', overall_score: 8.5, ...}\nIf consensus_verdict == 'needs_revision':\n    Review recommendations, adjust seed_questions/campaign_instructions, and re-run Step 2.\n```\n\n**Retry**: Safe to retry on network errors. If consensus_verdict is 'needs_revision', do NOT retry this tool — instead regenerate FAQs with improved inputs and re-evaluate.\n\n**Related**: generate_faqs (prerequisite), scrape_url (prerequisite), evaluate_content (general-purpose evaluator)",
+                "inputSchema": {
+                    "additionalProperties": false,
+                    "properties": {
+                        "generated_faqs": {
+                            "items": {},
+                            "type": "array"
+                        },
+                        "page_context": {
+                            "additionalProperties": true,
+                            "type": "object"
+                        },
+                        "evaluation_models": {
+                            "anyOf": [
+                                {
+                                    "items": {},
+                                    "type": "array"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "default": null
+                        }
+                    },
+                    "required": [
+                        "generated_faqs",
+                        "page_context"
+                    ],
+                    "type": "object"
+                },
+                "outputSchema": {
+                    "additionalProperties": true,
+                    "type": "object"
+                },
+                "_meta": {
+                    "fastmcp": {
+                        "tags": []
+                    }
+                }
+            },
+            {
+                "name": "aem_dam_asset_download",
+                "description": "Download an asset or specific rendition from AEM DAM and return as base64-encoded content.\n\n**Use when**: You need to retrieve asset binary data for processing, Photoshop assembly, or transfer to another system.\n\n**Prerequisites**: None. Standalone tool.\n\n**Inputs**:\n    - assetPath (str, optional): Full DAM path. Example: '/content/dam/library/brand-kit/valentine-8/hero.jpg'\n    - path (str, optional): Alias for assetPath. One of assetPath or path is REQUIRED.\n    - assetRendition (str, optional): Rendition name to download instead of original.\n        Accepted values:\n            - 'cq5dam.thumbnail.319.319.png' (Small thumbnail 319x319)\n            - 'cq5dam.thumbnail.140.100.png' (Tiny thumbnail 140x100)\n            - 'cq5dam.thumbnail.48.48.png' (Icon thumbnail 48x48)\n            - 'cq5dam.web.1280.1280.jpeg' (Web-optimized)\n            - None (default, downloads original)\n\n**Returns**:\n    - status: 'success' | 'error'\n    - path: str (asset path downloaded)\n    - assetRendition: str | None\n    - mime_type: str (e.g., 'image/jpeg')\n    - file_size: int (bytes)\n    - filename: str\n    - content_base64: str (base64-encoded binary)\n    - error_message: str (if error)\n\n**Example** (params only, see module docstring for full JSON-RPC wrapper):\n```json\n{\n    \"name\": \"aem_dam_asset_download\",\n    \"arguments\": {\n        \"path\": \"/content/dam/library/brand-kit/valentine-8/hero.jpg\",\n        \"assetRendition\": \"cq5dam.thumbnail.319.319.png\"\n    }\n}\n```\n\n**Retry**: Safe on network errors. If 404, verify path with aem_list_assets first.\n\n**Related**: aem_list_assets, aem_dam_asset_search, aem_download_asset",
+                "inputSchema": {
+                    "additionalProperties": false,
+                    "properties": {
+                        "assetPath": {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "default": null
+                        },
+                        "path": {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "default": null
+                        },
+                        "assetRendition": {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "default": null
+                        }
+                    },
+                    "type": "object"
+                },
+                "outputSchema": {
+                    "additionalProperties": true,
+                    "type": "object"
+                },
+                "_meta": {
+                    "fastmcp": {
+                        "tags": []
+                    }
+                }
+            },
+            {
+                "name": "aem_dam_asset_search",
+                "description":"Search AEM DAM assets using OData-style filter expressions via the damAssetSearch API.\n\n**Use when**: You need complex metadata queries, path range searches, or filtering by multiple fields.\n\n**Prerequisites**: None. Standalone tool.\n\n**Inputs**:\n    - searchFilter (str, REQUIRED): OData-style filter expression.\n        Filter patterns:\n            - By ItemID: \"ShotFlowInfo_ItemID eq '5674105844'\"\n            - By path range: \"aem_path ge '/content/dam/library/brand-kit/valentine-8' and aem_path lt '/content/dam/library/brand-kit/valentine-8\￿'\"\n            - By format: \"dc_format eq 'image/jpeg'\"\n            - Combined: \"ShotFlowInfo_ItemID eq '123' and dc_format eq 'image/jpeg'\"\n        \n        Available fields (may change as new fields are added):\n            - aem_path: str (Full DAM path)\n            - aem_assetName: str (Filename, e.g., 'metadata-test.jpg')\n            - aem_fileExtension: str ('jpg', 'png', etc.)\n            - dc_format: str (MIME type, e.g., 'image/jpeg')\n            - ShotFlowInfo_ItemID: str (Walmart Item ID)\n            - jcr_created: datetime (ISO 8601)\n            - jcr_createdBy: str (email)\n            - jcr_lastModified: datetime (ISO 8601)\n            - jcr_lastModifiedBy: str (email)\n            - walmart_aiApprovedSelectedUse: array\n            - walmart_aiModification: array\n\n    - recordsToShow (int, optional): Max results. Default: 10. Range: 1-1000.\n    - orderby (str, optional): Sort field. Default: 'jcr_created'.\n        Accepted values: 'jcr_created', 'jcr_lastModified', 'dc_title', 'aem_path'\n        Add ' asc' or ' desc' suffix (e.g., 'jcr_created desc')\n    - recordStart (int, optional): Pagination offset. Default: 0.\n\n**Returns**:\n    - status: 'success' | 'error'\n    - data.count: int (total matches)\n    - data.assets: array of asset objects with full metadata\n    - error_message: str (if error)\n\n**Example** (params only, see module docstring for full JSON-RPC wrapper):\n```json\n{\n    \"name\": \"aem_dam_asset_search\",\n    \"arguments\": {\n        \"searchFilter\": \"ShotFlowInfo_ItemID eq '5674105844'\",\n        \"recordsToShow\": 50,\n        \"orderby\": \"jcr_created desc\"\n    }\n}\n```\n\n**Retry**: Safe on network errors. If no results, verify filter syntax.\n\n**Related**: aem_list_assets (simpler folder listing), aem_search_assets (QueryBuilder API), aem_dam_asset_download",
+                "inputSchema": {
+                    "additionalProperties": false,
+                    "properties": {
+                        "searchFilter": {
+                            "type": "string"
+                        },
+                        "recordsToShow": {
+                            "default": 10,
+                            "type": "integer"
+                        },
+                        "orderby": {
+                            "default": "jcr_created",
+                            "type": "string"
+                        },
+                        "recordStart": {
+                            "default": 0,
+                            "type": "integer"
+                        }
+                    },
+                    "required": [
+                        "searchFilter"
+                    ],
+                    "type": "object"
+                },
+                "outputSchema": {
+                    "additionalProperties": true,
+                    "type": "object"
+                },
+                "_meta": {
+                    "fastmcp": {
+                        "tags": []
+                    }
+                }
+            },
+            {
+                "name": "aem_upload_asset",
+                "description": "Upload a single asset or multiple assets to AEM DAM with automatic folder creation.\n\n**Use when**: You need to store images, PDFs, or Photoshop outputs in AEM DAM.\n\n**Prerequisites**: \n    - Binary content as base64 string (from azure_download, external URL, or generated content)\n    - For Photoshop outputs: first call azure_download to get content\n\n**Inputs**:\n    - folder_path (str, REQUIRED): Target DAM folder. Example: '/content/dam/library/brand-kit/valentine-8'\n        Folder created automatically if it doesn't exist.\n    - file_name (str, optional): Filename with extension. REQUIRED for single upload.\n        Example: 'hero-image.jpg'\n    - file_content_base64 (str, optional): Base64-encoded content. REQUIRED for single upload.\n        Accepts raw base64 or data URI format ('data:image/jpeg;base64,...')\n    - assets (list[dict], optional): For bulk upload. If provided, file_name/file_content_base64 ignored.\n        Each dict: {\"file_name\": str, \"file_content_base64\": str}\n\n**Returns**:\n    - status: 'success' | 'error'\n    - data.dam_path: str (full path to uploaded asset)\n    - data.asset_url: str\n    - data.file_name: str\n    - error_message: str (if error)\n\n**Example** (Single - params only, see module docstring for full JSON-RPC wrapper):\n```json\n{\n    \"name\": \"aem_upload_asset\",\n    \"arguments\": {\n        \"folder_path\": \"/content/dam/library/brand-kit/valentine-8\",\n        \"file_name\": \"hero-banner.jpg\",\n        \"file_content_base64\": \"/9j/4AAQSkZJRg...\"\n    }\n}\n```\n\n**Example** (Bulk):\n```json\n{\n    \"name\": \"aem_upload_asset\",\n    \"arguments\": {\n        \"folder_path\": \"/content/dam/library/brand-kit/valentine-8\",\n        \"assets\": [\n            {\"file_name\": \"image1.jpg\", \"file_content_base64\": \"...\"},\n            {\"file_name\": \"image2.png\", \"file_content_base64\": \"...\"}\n        ]\n    }\n}\n```\n\n**Retry**: Safe on network errors. Do NOT retry on invalid base64 errors.\n\n**Related**: aem_upload_assets_bulk, azure_download, aem_list_assets",
+                "inputSchema": {
+                    "additionalProperties": false,
+                    "properties": {
+                        "folder_path": {
+                            "type": "string"
+                        },
+                        "file_name": {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "default": null
+                        },
+                        "file_content_base64": {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "default": null
+                        },
+                        "assets": {
+                            "anyOf": [
+                                {
+                                    "items": {
+                                        "additionalProperties": true,
+                                        "type": "object"
+                                    },
+                                    "type": "array"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "default": null
+                        }
+                    },
+                    "required": [
+                        "folder_path"
+                    ],
+                    "type": "object"
+                },
+                "outputSchema": {
+                    "additionalProperties": true,
+                    "type": "object"
+                },
+                "_meta": {
+                    "fastmcp": {
+                        "tags": []
+                    }
+                }
+            },
+            {
+                "name": "aem_upload_assets_bulk",
+                "description": "Batch upload multiple assets to AEM DAM in a single operation with automatic folder creation.\n\n**Use when**: You have multiple files to upload and want efficient batch processing.\n\n**Prerequisites**: \n    - Binary content for each file as base64 strings\n    - For Photoshop outputs: first call azure_download for each file\n\n**Inputs**:\n    - folder_path (str, REQUIRED): Target DAM folder. Example: '/content/dam/library/brand-kit/valentine-8'\n    - assets (list[dict], REQUIRED): List of asset objects to upload.\n        Each dict must have:\n            - file_name (str, REQUIRED): Filename with extension\n            - file_content_base64 (str, REQUIRED): Base64-encoded content\n        Alternative field names accepted: 'filename', 'content_base64'\n\n**Returns**:\n    - status: 'success' | 'partial' | 'error'\n    - data.successful_uploads: int\n    - data.failed_uploads: int\n    - data.results: array (per-file results with dam_path)\n    - error_message: str (if error)\n\n**Example** (params only, see module docstring for full JSON-RPC wrapper):\n```json\n{\n    \"name\": \"aem_upload_assets_bulk\",\n    \"arguments\": {\n        \"folder_path\": \"/content/dam/library/brand-kit/valentine-8\",\n        \"assets\": [\n            {\"file_name\": \"hero.jpg\", \"file_content_base64\": \"/9j/4AAQ...\"},\n            {\"file_name\": \"banner.png\", \"file_content_base64\": \"iVBORw0...\"}\n        ]\n    }\n}\n```\n\n**Retry**: If 'partial', only retry failed files from results array. Do NOT retry invalid base64 errors.\n\n**Related**: aem_upload_asset, azure_download, aem_list_assets",
+                "inputSchema": {
+                    "additionalProperties": false,
+                    "properties": {
+                        "folder_path": {
+                            "type": "string"
+                        },
+                        "assets": {
+                            "items": {
+                                "additionalProperties": true,
+                                "type": "object"
+                            },
+                            "type": "array"
+                        }
+                    },
+                    "required": [
+                        "folder_path",
+                        "assets"
+                    ],
+                    "type": "object"
+                },
+                "outputSchema": {
+                    "additionalProperties": true,
+                    "type": "object"
+                },
+                "_meta": {
+                    "fastmcp": {
+                        "tags": []
+                    }
+                }
+            },
+            {
+                "name": "aem_download_asset",
+                "description": "Download an asset or specific rendition from AEM DAM using the direct AEM Assets API.\n\n**Use when**: You need asset binary data via direct AEM API (alternative to aem_dam_asset_download).\n\n**Prerequisites**: None. Standalone tool.\n\n**Inputs**:\n    - path (str, REQUIRED): Full DAM path. Example: '/content/dam/library/brand-kit/valentine-8/hero.jpg'\n    - rendition (str, optional): Full rendition path to download instead of original.\n        Example: '/content/dam/.../hero.jpg/jcr:content/renditions/cq5dam.thumbnail.319.319.png'\n        Common suffixes:\n            - '/jcr:content/renditions/cq5dam.thumbnail.319.319.png'\n            - '/jcr:content/renditions/cq5dam.web.1280.1280.jpeg'\n            - None (default, downloads original)\n\n**Returns**:\n    - status: 'success' | 'error'\n    - asset_path: str\n    - rendition: str | None\n    - mime_type: str\n    - file_size: int (bytes)\n    - filename: str\n    - content_base64: str (base64-encoded binary)\n    - error_message: str (if error)\n\n**Example** (params only, see module docstring for full JSON-RPC wrapper):\n```json\n{\n    \"name\": \"aem_download_asset\",\n    \"arguments\": {\n        \"path\": \"/content/dam/library/brand-kit/valentine-8/hero.jpg\"\n    }\n}\n```\n\n**Retry**: Safe on network errors. If 404, verify path with aem_list_assets.\n\n**Related**: aem_dam_asset_download (simpler rendition param), aem_list_assets, aem_download_asset_by_path (alias)",
+                "inputSchema": {
+                    "additionalProperties": false,
+                    "properties": {
+                        "path": {
+                            "type": "string"
+                        },
+                        "rendition": {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "default": null
+                        }
+                    },
+                    "required": [
+                        "path"
+                    ],
+                    "type": "object"
+                },
+                "outputSchema": {
+                    "additionalProperties": true,
+                    "type": "object"
+                },
+                "_meta": {
+                    "fastmcp": {
+                        "tags": []
+                    }
+                }
+            },
+            {
+                "name": "aem_download_asset_by_path",
+                "description": "Alias for aem_download_asset using 'asset_path' parameter name.\n\n**Use when**: Your workflow provides 'asset_path' instead of 'path' (same functionality as aem_download_asset).\n\n**Prerequisites**: None. Standalone tool.\n\n**Inputs**:\n    - asset_path (str, REQUIRED): Full DAM path. Example: '/content/dam/library/brand-kit/valentine-8/hero.jpg'\n    - rendition (str, optional): Full rendition path. See aem_download_asset for examples.\n\n**Returns**: Same as aem_download_asset (status, content_base64, mime_type, file_size, filename)\n\n**Example** (params only, see module docstring for full JSON-RPC wrapper):\n```json\n{\n    \"name\": \"aem_download_asset_by_path\",\n    \"arguments\": {\n        \"asset_path\": \"/content/dam/library/brand-kit/valentine-8/hero.jpg\"\n    }\n}\n```\n\n**Retry**: Safe on network errors.\n\n**Related**: aem_download_asset (primary), aem_dam_asset_download",
+                "inputSchema": {
+                    "additionalProperties": false,
+                    "properties": {
+                        "asset_path": {
+                            "type": "string"
+                        },
+                        "rendition": {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "default": null
+                        }
+                    },
+                    "required": [
+                        "asset_path"
+                    ],
+                    "type": "object"
+                },
+                "outputSchema": {
+                    "additionalProperties": true,
+                    "type": "object"
+                },
+                "_meta": {
+                    "fastmcp": {
+                        "tags": []
+                    }
+                }
+            },
+            {
+                "name": "aem_list_assets",
+                "description": "List all assets in a specific AEM DAM folder with full metadata.\n\n**Use when**: You need to browse folder contents, find asset paths, or verify uploads succeeded.\n\n**Prerequisites**: None. Standalone tool.\n\n**Inputs**:\n    - folder_path (str, REQUIRED): Full DAM folder path. Example: '/content/dam/library/brand-kit/valentine-8'\n        Must be a folder path, not an asset path.\n\n**Returns**:\n    - status: 'success' | 'error'\n    - dam_path: str (folder path listed)\n    - project_name: str (leaf folder name, e.g., 'valentine-8')\n    - total: int (number of assets)\n    - assets: array of asset objects with:\n        - aem_path: str\n        - dc_title: str\n        - dc_format: str (MIME type)\n        - tiff_ImageWidth, tiff_ImageLength: int (dimensions)\n        - downloadUrl: str (relative URL to download original, e.g., '/api/aem-download-asset?path=...')\n        - thumbnailUrl: str (relative URL to download 319x319 thumbnail)\n        - All damAssetSearch metadata fields\n    - error_message: str (if error)\n\n**Example** (params only, see module docstring for full JSON-RPC wrapper):\n```json\n{\n    \"name\": \"aem_list_assets\",\n    \"arguments\": {\n        \"folder_path\": \"/content/dam/library/brand-kit/valentine-8\"\n    }\n}\n```\n\n**Retry**: Safe on network errors. Empty results = folder exists but has no assets.\n\n**Related**: aem_dam_asset_search (complex queries), aem_dam_asset_download, download_asset_kit",
+                "inputSchema": {
+                    "additionalProperties": false,
+                    "properties": {
+                        "folder_path": {
+                            "type": "string"
+                        }
+                    },
+                    "required": [
+                        "folder_path"
+                    ],
+                    "type": "object"
+                },
+                "outputSchema": {
+                    "additionalProperties": true,
+                    "type": "object"
+                },
+                "_meta": {
+                    "fastmcp": {
+                        "tags": []
+                    }
+                }
+            },
+            {
+                "name": "aem_search_assets",
+                "description": "Search AEM DAM assets by ItemID or fulltext using the QueryBuilder API.\n\n**Use when**: You need simple ItemID lookups or keyword searches (simpler than aem_dam_asset_search).\n\n**Prerequisites**: None. Standalone tool.\n\n**Inputs**:\n    - folder_path (str, optional): DAM folder to search. Default: '/content/dam' (entire DAM).\n        Example: '/content/dam/library/brand-kit'\n    - query (str, optional): Alias for item_id.\n    - limit (int, optional): Max results. Default: 10. Use -1 for unlimited (caution).\n    - fulltext (str, optional): Keyword search across title, description, text fields.\n        Example: 'valentine banner'\n    - item_id (str, optional): Walmart Item ID to search in 'ShotFlowInfo:ItemID' metadata.\n        Example: '5674105844'\n    - path (str, optional): Alias for folder_path.\n\n**Returns**:\n    - status: 'success' | 'error'\n    - assets: array of matching assets with path, title, metadata\n    - total: int\n    - error_message: str (if error)\n\n**Example** (ItemID - params only, see module docstring for full JSON-RPC wrapper):\n```json\n{\n    \"name\": \"aem_search_assets\",\n    \"arguments\": {\n        \"item_id\": \"5674105844\",\n        \"limit\": 50\n    }\n}\n```\n\n**Example** (Fulltext):\n```json\n{\n    \"name\": \"aem_search_assets\",\n    \"arguments\": {\n        \"fulltext\": \"valentine banner\",\n        \"folder_path\": \"/content/dam/library/brand-kit\"\n    }\n}\n```\n\n**Retry**: Safe on network errors. If no results, verify ItemID or broaden search path.\n\n**Related**: aem_dam_asset_search (OData filters), aem_list_assets (folder listing), get_images_by_item_ids (Walmart.com scraping)",
+                "inputSchema": {
+                    "additionalProperties": false,
+                    "properties": {
+                        "folder_path": {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "default": null
+                        },
+                        "query": {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "default": null
+                        },
+                        "limit": {
+                            "default": 10,
+                            "type": "integer"
+                        },
+                        "fulltext": {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "default": null
+                        },
+                        "item_id": {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "default": null
+                        },
+                        "path": {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "default": null
+                        }
+                    },
+                    "type": "object"
+                },
+                "outputSchema": {
+                    "additionalProperties": true,
+                    "type": "object"
+                },
+                "_meta": {
+                    "fastmcp": {
+                        "tags": []
+                    }
+                }
+            },
+            {
+                "name": "workfront_get_metadata",
+                "description": "Retrieve specific fields or full metadata from a Workfront project via Workfront Fusion webhook.\n\nThis tool uses the Workfront Fusion webhook API to fetch project metadata. It returns a flattened\nresponse containing both standard Workfront fields and custom form fields (prefixed with 'DE:').\n\nAvailable fields in the response include:\n    - Standard fields: ID, name, referenceNumber, status, owner, sponsor, enteredBy, lastUpdatedBy,\n      plannedStartDate, plannedCompletionDate, actualStartDate, estCompletionDate, lastUpdateDate,\n      entryDate, percentComplete, totalTaskCount, group, portfolio, team, category, etc.\n    - Custom fields (DE:): DE:Division, DE:Vertical, DE:Subcategory, DE:Creative Project Name,\n      DE:AEM Project Link, DE:Confidential?, DE:Requested handoff date, DE:Type of marketing asset,\n      DE:WCS - Content Type, DE:Overview / objective of request, DE:Additional Approvers, etc.\n    - Workfront Project Link: Direct link to the project in Workfront\n\nNote: Custom Fields in Workfront are prefixed with 'DE:'\nFor example, if you have a custom field named 'Copy Direction', you would use 'DE:Copy Direction' as the field name.\n\nIf you have any questions, please reach out directly to the Workfront team.\n\nSample Usage:\n{\n    \"jsonrpc\": \"2.0\",\n    \"id\": 1,\n    \"method\": \"tools/call\",\n    \"params\": {\n        \"name\": \"workfront_get_metadata\",\n        \"arguments\": {\n            \"project_id\": \"69010161000053b75f8d1b612b560578\"\n        }\n    }\n}\n\nArgs:\n    project_id: Workfront project ID (e.g., '69010161000053b75f8d1b612b560578')\n    field_names: Optional list of field names to retrieve (e.g., ['DE:AEM Project Link', 'name']).\n                 If not provided, returns full project metadata from Fusion webhook.\n\nReturns:\n    A dictionary with project_id and requested fields or full metadata including standard and custom fields.",
+                "inputSchema": {
+                    "additionalProperties": false,
+                    "properties": {
+                        "project_id": {
+                            "type": "string"
+                        },
+                        "field_names": {
+                            "anyOf": [
+                                {
+                                    "items": {
+                                        "type": "string"
+                                    },
+                                    "type": "array"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "default": null
+                        }
+                    },
+                    "required": [
+                        "project_id"
+                    ],
+                    "type": "object"
+                },
+                "outputSchema": {
+                    "additionalProperties": true,
+                    "type": "object"
+                },
+                "_meta": {
+                    "fastmcp": {
+                        "tags": []
+                    }
+                }
+            },
+            {
+                "name": "evaluate_content",
+                "description": "Evaluate any type of generated content using multi-model consensus (GPT, Gemini, Claude) for production readiness.\n\n**Use when**: You have generated content (FAQs, copy blocks, alt text, or title/description) and need quality validation before publishing.\n\n**Prerequisites**:\n    - Generated content is REQUIRED. Produce content first using the appropriate generation tool:\n        - FAQs: Call `generate_faqs` first\n        - Copy blocks: Call `generate_content` with prompt_name='generate_product_copy' or similar\n        - Alt text: Generate via `generate_image_description` or manual input\n        - Title/Description: Call `generate_content` with prompt_name='generate_seo_title'/'generate_seo_description'\n    - Page context is REQUIRED. Call `scrape_url` first to obtain page data.\n\n**Inputs**:\n    - content_type (str, REQUIRED): Type of content to evaluate.\n        Accepted values:\n            - 'FAQ': For FAQ pairs. Requires generated_content.generated_faqs.\n            - 'CopyBlock': For copy block text. Requires generated_content.copy_block.\n            - 'AltText': For image alt text. Requires generated_content.alt_text.\n            - 'TitleDescription': For meta title/description. Requires generated_content.meta_title and meta_description.\n    - generated_content (dict, REQUIRED): Content to evaluate. Structure depends on content_type:\n        - FAQ: {\"generated_faqs\": [{\"question\": \"...\", \"answer\": \"...\"}]}\n        - CopyBlock: {\"copy_block\": \"text content\"}\n        - AltText: {\"alt_text\": \"...\", \"image_description\": \"...\" (optional)}\n        - TitleDescription: {\"meta_title\": \"...\", \"meta_description\": \"...\", \"page_url\": \"...\" (optional)}\n    - page_context (dict, REQUIRED): Scraped page data from `scrape_url` tool.\n    - evaluation_models (list, optional): Models for multi-model evaluation.\n        Default: ['gpt-5-mini', 'gemini-2.5-flash', 'claude-sonnet-4@20250514']\n    - campaign_instructions (str, optional): Special campaign instructions to consider during evaluation.\n\n**Returns**:\n    - consensus_verdict (str): 'approved' or 'needs_revision'\n    - overall_score (float): Average score across all models (0–10)\n    - model_evaluations (list): Per-model results with score, verdict, feedback, issues\n    - recommendations (list): Suggested improvements\n\n**Example** (CopyBlock — params only, see module docstring for full JSON-RPC wrapper):\n```json\n{\n    \"name\": \"evaluate_content\",\n    \"arguments\": {\n        \"content_type\": \"CopyBlock\",\n        \"generated_content\": {\"copy_block\": \"Shop our wide selection of TVs...\"},\n        \"page_context\": {\"page_type\": \"category\", \"scraped_data\": {\"title\": \"TVs\"}}\n    }\n}\n```\n\n**Example** (AltText):\n```json\n{\n    \"name\": \"evaluate_content\",\n    \"arguments\": {\n        \"content_type\": \"AltText\",\n        \"generated_content\": {\"alt_text\": \"65-inch 4K Smart TV\", \"image_description\": \"TV on wall mount\"},\n        \"page_context\": {\"page_type\": \"product\", \"scraped_data\": {\"title\": \"Samsung 65\" TV\"}}\n    }\n}\n```\n\n**Workflow**:\n```\nStep 1: scrape_url(url=\"...\") → page_context\nStep 2: Generate content (generate_faqs, generate_content, etc.) → generated_content\nStep 3: evaluate_content(content_type=\"...\", generated_content=<step2>, page_context=<step1>)\n        → {consensus_verdict, overall_score, recommendations}\nIf 'needs_revision': adjust generation inputs and repeat Steps 2–3.\n```\n\n**Retry**: Safe to retry on network errors. If 'needs_revision', do NOT retry — regenerate content with improved inputs instead.\n\n**Related**: generate_faqs, generate_content, generate_image_description, scrape_url (all prerequisites depending on content_type), evaluate_faqs (FAQ-specific evaluator)",
+                "inputSchema": {
+                    "additionalProperties": false,
+                    "properties": {
+                        "content_type": {
+                            "type": "string"
+                        },
+                        "generated_content": {
+                            "additionalProperties": true,
+                            "type": "object"
+                        },
+                        "page_context": {
+                            "additionalProperties": true,
+                            "type": "object"
+                        },
+                        "evaluation_models": {
+                            "anyOf": [
+                                {
+                                    "items": {},
+                                    "type": "array"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "default": null
+                        },
+                        "campaign_instructions": {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "default": ""
+                        }
+                    },
+                    "required": [
+                        "content_type",
+                        "generated_content",
+                        "page_context"
+                    ],
+                    "type": "object"
+                },
+                "outputSchema": {
+                    "additionalProperties": true,
+                    "type": "object"
+                },
+                "_meta": {
+                    "fastmcp": {
+                        "tags": []
+                    }
+                }
+            },
+            {
+                "name": "generate_image_description",
+                "description": "Generate a text description of an image using a vision model (Llama 3.2 11B Vision). Primarily used for creating SEO-friendly alt text.\n\n**Use when**: You need to generate alt text or a textual description of a product image, banner, or any visual asset for SEO or accessibility purposes.\n\n**Prerequisites**: None. Standalone tool. The image must be accessible via a public URL.\n\n**Inputs**:\n    - image_url (str, REQUIRED): Publicly accessible URL of the image to analyze.\n        Example: 'https://i5.walmartimages.com/seo/product-image.jpeg'\n    - prompt (str, optional): Custom prompt for the vision model.\n        Default: 'Can you describe the image so I can create alt text for the image to benefit search engine bots for ranking. Do not include object material.'\n        Tip: Customize the prompt for specific use cases (e.g., 'Describe the product colors and features').\n    - model_name (str, optional): Vision model to use. Default: 'llama3-2-11b-vision-instruct'.\n        Accepted values:\n            - 'llama3-2-11b-vision-instruct' (default, best for product descriptions)\n\n**Returns**:\n    - image_url (str): The URL that was analyzed\n    - description (str): Generated text description of the image\n    - model_used (str): Vision model that produced the description\n    - error (str): Error message if generation failed\n\n**Example** (params only, see module docstring for full JSON-RPC wrapper):\n```json\n{\n    \"name\": \"generate_image_description\",\n    \"arguments\": {\n        \"image_url\": \"https://i5.walmartimages.com/seo/product-image.jpeg\",\n        \"prompt\": \"Describe this product image for alt text\"\n    }\n}\n```\n\n**Workflow** (alt text generation + evaluation):\n```\nStep 1: generate_image_description(image_url=\"https://...\") → {description: \"...\"}\nStep 2 (optional): evaluate_content(\n            content_type=\"AltText\",\n            generated_content={\"alt_text\": <step1 description>},\n            page_context=<scrape_url result>\n        ) → quality verdict\n```\n\n**Retry**: Safe to retry on network/timeout errors. If description quality is poor, adjust the prompt and retry.\n\n**Related**: evaluate_content (quality check with content_type='AltText'), scrape_url (for page context if evaluating)",
+                "inputSchema": {
+                    "additionalProperties": false,
+                    "properties": {
+                        "image_url": {
+                            "type": "string"
+                        },
+                        "prompt": {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "default": null
+                        },
+                        "model_name": {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "default": "llama3-2-11b-vision-instruct"
+                        }
+                    },
+                    "required": [
+                        "image_url"
+                    ],
+                    "type": "object"
+                },
+                "outputSchema": {
+                    "additionalProperties": true,
+                    "type": "object"
+                },
+                "_meta": {
+                    "fastmcp": {
+                        "tags": []
+                    }
+                }
+            },
+            {
+                "name": "generate_push_notifications",
+                "description": "Generate push notifications using a three-stage AI pipeline: headline generation → body copy generation → quality evaluation.\n\n**Use when**: You need to create push notification content (headline + body copy) for Walmart campaigns, deals pages, product launches, or promotional events.\n\n**Prerequisites**:\n    - If use_page_context is true (default), a valid Walmart page URL is REQUIRED. The tool will internally call `scrape_url` to fetch page context.\n      Supported URL patterns: /shop/deals/, /browse/, /cp/, /c/kp/, /ip/, /store/\n    - If use_page_context is false, no URL is needed — generic notifications are generated using only theme and campaign_brief.\n    - No prior tool calls are needed — this tool handles scraping internally.\n\n**Inner Workings (3 stages)**:\n    1. **Stage 1 — Headlines**: Generates N headlines using the headline prompt template with the specified messaging strategy and emoji level.\n    2. **Stage 2 — Body Copy**: Takes the Stage 1 headlines and generates matching body copy for each, producing complete notification pairs.\n    3. **Stage 3 — Evaluation**: Automatically evaluates the generated notifications for quality using the same LLM model.\n\n**Inputs**:\n    - page_url (str, conditionally REQUIRED): Full Walmart URL to scrape for context.\n        Required when use_page_context=true. Example: 'https://www.walmart.com/shop/deals/clearance'\n    - messaging_strategy (str, optional): Notification strategy to apply. Default: 'all'.\n        Accepted values:\n            - 'all' (generates a mix of all strategies)\n            - 'Value/Deal' (price-focused, savings messaging)\n            - 'FOMO/Urgency' (limited time, scarcity messaging)\n            - 'New/Restock' (new arrivals, back-in-stock messaging)\n    - emoji_usage (str, optional): Emoji density in generated text. Default: 'medium'.\n        Accepted values: 'low', 'medium', 'high'\n    - num_notifications (int, optional): Number of push notifications to generate. Default: 25. Range: 1–50.\n    - model_name (str, optional): LLM model for all three stages. Default: 'gpt-5-mini'.\n        Accepted values: 'gpt-5-mini', 'gpt-4.1-mini', 'gemini-2.5-flash', 'claude-sonnet-4@20250514'\n    - theme (str, optional): Campaign theme to guide tone and content. Default: ''.\n        Example: 'Summer Sale', 'Back to School', 'Valentine's Day'\n    - campaign_brief (str, optional): Detailed campaign description for additional context. Default: ''.\n        Example: 'Promote summer clearance items with focus on outdoor furniture and grills'\n    - use_page_context (bool, optional): Whether to scrape the page URL for context. Default: true.\n        Set to false for generic notifications that rely only on theme/campaign_brief.\n\n**Returns**:\n    - status: 'success' | 'error'\n    - data.page_url (str): URL used\n    - data.messaging_strategy (str): Strategy applied\n    - data.emoji_usage (str): Emoji level used\n    - data.num_notifications (int): Count of notifications generated\n    - data.model_used (str): LLM model used\n    - data.notifications (list): Array of notification objects:\n        - headline (str): Push notification headline\n        - body_copy (str): Push notification body text\n        - hook (str): Messaging strategy used for this notification\n    - data.evaluation (dict): Stage 3 evaluation results (scores, verdict)\n    - error (str): Error message if any stage failed\n\n**Example** (params only, see module docstring for full JSON-RPC wrapper):\n```json\n{\n    \"name\": \"generate_push_notifications\",\n    \"arguments\": {\n        \"page_url\": \"https://www.walmart.com/shop/deals/clearance\",\n        \"messaging_strategy\": \"all\",\n        \"emoji_usage\": \"medium\",\n        \"num_notifications\": 10,\n        \"theme\": \"Summer Sale\",\n        \"campaign_brief\": \"Promote summer clearance items\"\n    }\n}\n```\n\n**Example** (generic, no page context):\n```json\n{\n    \"name\": \"generate_push_notifications\",\n    \"arguments\": {\n        \"use_page_context\": false,\n        \"theme\": \"Back to School\",\n        \"campaign_brief\": \"Drive traffic for school supplies and electronics\",\n        \"num_notifications\": 15,\n        \"messaging_strategy\": \"Value/Deal\"\n    }\n}\n```\n\n**Retry**: Safe to retry on network/timeout errors. The tool has built-in retry logic (2 attempts with exponential backoff) for each LLM stage. If the tool still fails, retry the entire call.\n\n**Related**: scrape_url (used internally), evaluate_content (alternative evaluator)",
+                "inputSchema": {
+                    "additionalProperties": false,
+                    "properties": {
+                        "page_url": {
+                            "default": "",
+                            "type": "string"
+                        },
+                        "messaging_strategy": {
+                            "default": "all",
+                            "type": "string"
+                        },
+                        "emoji_usage": {
+                            "default": "medium",
+                            "type": "string"
+                        },
+                        "num_notifications": {
+                            "default": 25,
+                            "type": "integer"
+                        },
+                        "model_name": {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "default": null
+                        },
+                        "theme": {
+                            "default": "",
+                            "type": "string"
+                        },
+                        "campaign_brief": {
+                            "default": "",
+                            "type": "string"
+                        },
+                        "use_page_context": {
+                            "default": true,
+                            "type": "boolean"
+                        },
+                        "tenant": {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "default": null
+                        },
+                        "locale": {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "default": null
+                        }
+                    },
+                    "type": "object"
+                },
+                "outputSchema": {
+                    "additionalProperties": true,
+                    "type": "object"
+                },
+                "_meta": {
+                    "fastmcp": {
+                        "tags": []
+                    }
+                }
+            },
+            {
+                "name": "seo_mcp_bigquery",
+                "description": "Execute BigQuery operations for SEO analytics.\n\nOperations:\n- execute_query: Run SQL queries on BigQuery\n- analyze_table: Get table schema and statistics\n- list_datasets: List available datasets\n- list_tables: List tables in a dataset\n- get_query_suggestions: Get AI-powered query suggestions\n- explain_query: Get query execution plan\n\nArgs:\n    operation: The BigQuery operation to perform\n    query: SQL query (for execute_query, explain_query)\n    table_id: Table identifier (for analyze_table)\n    dataset_id: Dataset identifier\n    project_id: GCP project ID\n    context: Natural language context (for get_query_suggestions)\n    timeout: Query timeout in seconds\n    dry_run: Validate query without executing\n\nReturns:\n    Operation results with status and data",
+                "inputSchema": {
+                    "additionalProperties": false,
+                    "properties": {
+                        "operation": {
+                            "type": "string"
+                        },
+                        "query": {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "default": null
+                        },
+                        "table_id": {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "default": null
+                        },
+                        "dataset_id": {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "default": null
+                        },
+                        "project_id": {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "default": null
+                        },
+                        "context": {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "default": null
+                        },
+                        "timeout": {
+                            "anyOf": [
+                                {
+                                    "type": "integer"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "default": 30
+                        },
+                        "dry_run": {
+                            "anyOf": [
+                                {
+                                    "type": "boolean"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "default": false
+                        }
+                    },
+                    "required": [
+                        "operation"
+                    ],
+                    "type": "object"
+                },
+                "outputSchema": {
+                    "additionalProperties": true,
+                    "type": "object"
+                },
+                "_meta": {
+                    "fastmcp": {
+                        "tags": []
+                    }
+                }
+            },
+            {
+                "name": "generate_image",
+                "description": "Generate an image from a text prompt using Adobe Firefly, Gemini, or a custom Firefly model.\n\n**Use when**: You need to create a new image from scratch based on a text description — product visuals, banners, creative assets, illustrations, etc.\n\n**Prerequisites**:\n    - For standard Firefly or Gemini: None. Standalone tool.\n    - For custom Firefly models: Call `get_custom_models` first to retrieve available custom_model_id values.\n\n**Model Selection**:\n    - **'adobe-firefly'** (default): Best for photorealistic images, product shots, marketing visuals.\n      Supports width/height, num_variations, content_class. Returns image URLs.\n    - **'gemini-2.5-flash-image'**: Best for creative/conceptual images, fast generation.\n      Ignores width/height/num_variations/content_class. Returns base64-encoded image data.\n    - **Custom Firefly model**: Provide custom_model_id (from `get_custom_models`). Uses async generation.\n      Best for brand-specific styles trained on custom datasets.\n\n**Inputs**:\n    - prompt (str, REQUIRED): Text description of the image to generate.\n        Examples: 'a golden retriever playing fetch in a sunny park', 'flat-design illustration of blue glasses'\n    - model (str, optional): Image generation model. Default: 'adobe-firefly'.\n        Accepted values:\n            - 'adobe-firefly' (default, photorealistic, supports size/variations)\n            - 'gemini-2.5-flash-image' (fast, creative, returns base64)\n    - width (int, optional): Image width in pixels. Default: 2048. Range: 256–2688. Adobe Firefly only.\n    - height (int, optional): Image height in pixels. Default: 2048. Range: 256–2688. Adobe Firefly only.\n    - num_variations (int, optional): Number of image variations. Default: 1. Range: 1–4. Adobe Firefly only.\n    - content_class (str, optional): Content type for Firefly. Default: 'photo'.\n        Accepted values: 'photo' (realistic), 'art' (illustrated/artistic)\n    - custom_model_id (str, optional): Custom Firefly model ID (e.g., 'urn:aaid:sc:VA6C2:...').\n        When provided, uses async generation with the custom model. Get IDs from `get_custom_models`.\n    - model_version (str, optional): Model version for custom models. Default: 'image4_custom'.\n        Accepted values: 'image4_custom', 'image3'\n\n**Returns**:\n    - status: 'success' | 'error'\n    - images (list): Generated image objects:\n        - For Firefly: [{url, seed, mimeType}]\n        - For Gemini: [{base64, mimeType}]\n    - prompt (str): Original prompt used\n    - size (dict): Dimensions used (Firefly only)\n    - metadata (dict): Additional generation metadata\n    - job_id (str): Job ID (custom models only)\n    - error_message (str): Error details if failed\n\n**Example** (Firefly — params only, see module docstring for full JSON-RPC wrapper):\n```json\n{\n    \"name\": \"generate_image\",\n    \"arguments\": {\n        \"prompt\": \"a golden retriever playing fetch in a sunny park\",\n        \"model\": \"adobe-firefly\",\n        \"width\": 1024,\n        \"height\": 1024,\n        \"num_variations\": 2,\n        \"content_class\": \"photo\"\n    }\n}\n```\n\n**Example** (Gemini):\n```json\n{\n    \"name\": \"generate_image\",\n    \"arguments\": {\n        \"prompt\": \"a watercolor painting of a mountain lake at sunset\",\n        \"model\": \"gemini-2.5-flash-image\"\n    }\n}\n```\n\n**Example** (Custom Firefly model):\n```json\n{\n    \"name\": \"generate_image\",\n    \"arguments\": {\n        \"prompt\": \"A flat-design illustration of medium blue glasses\",\n        \"custom_model_id\": \"urn:aaid:sc:VA6C2:fbb120f1-639e-4dba-9436-5a6e77014eb8\",\n        \"content_class\": \"art\",\n        \"model_version\": \"image4_custom\"\n    }\n}\n```\n\n**Workflow** (custom model):\n```\nStep 1: get_custom_models() → {custom_models: [{assetId, displayName, ...}]}\nStep 2: generate_image(prompt=\"...\", custom_model_id=<step1 assetId>, content_class=\"art\")\n        → {images: [...], job_id: \"...\"}\n```\n\n**Retry**: Safe to retry on network/timeout errors. Gemini has a 180s timeout. If generation quality is poor, refine the prompt and retry.\n\n**Related**: get_custom_models (prerequisite for custom models), generate_batch_images (multiple prompts), edit_image (modify existing images), azure_upload_file (upload generated images for further processing)",
+                "inputSchema": {
+                    "additionalProperties": false,
+                    "properties": {
+                        "prompt": {
+                            "type": "string"
+                        },
+                        "model": {
+                            "default": "adobe-firefly",
+                            "type": "string"
+                        },
+                        "width": {
+                            "default": 2048,
+                            "type": "integer"
+                        },
+                        "height": {
+                            "default": 2048,
+                            "type": "integer"
+                        },
+                        "num_variations": {
+                            "default": 1,
+                            "type": "integer"
+                        },
+                        "content_class": {
+                            "default": "photo",
+                            "type": "string"
+                        },
+                        "custom_model_id": {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "default": null
+                        },
+                        "model_version": {
+                            "default": "image4_custom",
+                            "type": "string"
+                        }
+                    },
+                    "required": [
+                        "prompt"
+                    ],
+                    "type": "object"
+                },
+                "outputSchema": {
+                    "additionalProperties": true,
+                    "type": "object"
+                },
+                "_meta": {
+                    "fastmcp": {
+                        "tags": []
+                    }
+                }
+            },
+            {
+                "name": "get_custom_models",
+                "description": "Get list of available custom models from Adobe Firefly.\n\nThis tool retrieves all published custom models that can be used for image generation.\nCustom models are trained on specific styles or content types.\n\nReturns:\n    Dictionary containing:\n    - status: \"success\" or \"error\"\n    - custom_models: List of custom model objects, each with:\n        - assetId: Model ID to use in generate_image (e.g., \"urn:aaid:sc:VA6C2:...\")\n        - displayName: Human-readable name\n        - trainingMode: Training type (e.g., \"style\")\n        - samplePrompt: Example prompt for this model\n        - baseModel: Base model information\n        - publishedState: Model status\n        - createdDate: Creation timestamp\n        - modifiedDate: Last modified timestamp\n    - total_count: Total number of models\n\nExample:\n    models = get_custom_models()\n    # Use a model's assetId in generate_image:\n    generate_image(\n        prompt=\"A creative visual\",\n        custom_model_id=models[\"custom_models\"][0][\"assetId\"]\n    )",
+                "inputSchema": {
+                    "additionalProperties": false,
+                    "properties": {},
+                    "type": "object"
+                },
+                "outputSchema": {
+                    "additionalProperties": true,
+                    "type": "object"
+                },
+                "_meta": {
+                    "fastmcp": {
+                        "tags": []
+                    }
+                }
+            },
+            {
+                "name": "generate_batch_images",
+                "description": "Generate multiple images from a list of text prompts in a single batch operation. Processes prompts sequentially.\n\n**Use when**: You have multiple image prompts and want to generate all of them in one tool call instead of calling `generate_image` repeatedly.\n\n**Prerequisites**: None. Standalone tool. For custom Firefly models, use `generate_image` with custom_model_id instead (batch does not support custom models).\n\n**Inner Workings**: Iterates through each prompt sequentially, calling the same image generation pipeline as `generate_image`. Each prompt is independent — a failure on one prompt does not affect others.\n\n**Inputs**:\n    - prompts (list[str], REQUIRED): List of text descriptions for image generation.\n        Example: ['sunset over ocean', 'mountain landscape', 'city skyline']\n    - model (str, optional): Image generation model. Default: 'adobe-firefly'.\n        Accepted values:\n            - 'adobe-firefly' (default, photorealistic, supports size/variations)\n            - 'gemini-2.5-flash-image' (fast, creative, returns base64)\n    - width (int, optional): Image width in pixels. Default: 2048. Range: 256–2688. Adobe Firefly only.\n    - height (int, optional): Image height in pixels. Default: 2048. Range: 256–2688. Adobe Firefly only.\n    - num_variations (int, optional): Variations per prompt. Default: 1. Range: 1–4. Adobe Firefly only.\n    - content_class (str, optional): Content type for Firefly. Default: 'photo'.\n        Accepted values: 'photo' (realistic), 'art' (illustrated/artistic)\n\n**Returns**:\n    - status: 'success'\n    - total_prompts (int): Number of prompts processed\n    - successful (int): Number of successful generations\n    - failed (int): Number of failed generations\n    - results (list): Per-prompt results, each matching the `generate_image` return format:\n        - status: 'success' | 'error'\n        - images (list): Generated image objects\n        - error_message (str): Error details if that prompt failed\n\n**Example** (params only, see module docstring for full JSON-RPC wrapper):\n```json\n{\n    \"name\": \"generate_batch_images\",\n    \"arguments\": {\n        \"prompts\": [\"sunset over ocean\", \"mountain landscape\", \"city skyline\"],\n        \"model\": \"adobe-firefly\",\n        \"width\": 1024,\n        \"height\": 1024,\n        \"num_variations\": 1,\n        \"content_class\": \"photo\"\n    }\n}\n```\n\n**Example** (Gemini batch):\n```json\n{\n    \"name\": \"generate_batch_images\",\n    \"arguments\": {\n        \"prompts\": [\"watercolor mountain scene\", \"abstract geometric pattern\"],\n        \"model\": \"gemini-2.5-flash-image\"\n    }\n}\n```\n\n**Retry**: Safe to retry the entire call on network errors. Check results[].status to identify which prompts failed — you can re-run only the failed prompts in a new batch.\n\n**Related**: generate_image (single prompt, supports custom models), edit_image (modify existing images), azure_upload_file (upload results for further processing)",
+                "inputSchema": {
+                    "additionalProperties": false,
+                    "properties": {
+                        "prompts": {
+                            "items": {
+                                "type": "string"
+                            },
+                            "type": "array"
+                        },
+                        "model": {
+                            "default": "adobe-firefly",
+                            "type": "string"
+                        },
+                        "width": {
+                            "default": 2048,
+                            "type": "integer"
+                        },
+                        "height": {
+                            "default": 2048,
+                            "type": "integer"
+                        },
+                        "num_variations": {
+                            "default": 1,
+                            "type": "integer"
+                        },
+                        "content_class": {
+                            "default": "photo",
+                            "type": "string"
+                        }
+                    },
+                    "required": [
+                        "prompts"
+                    ],
+                    "type": "object"
+                },
+                "outputSchema": {
+                    "additionalProperties": true,
+                    "type": "object"
+                },
+                "_meta": {
+                    "fastmcp": {
+                        "tags": []
+                    }
+                }
+            },
+            {
+                "name": "edit_image",
+                "description": "Edit or modify an existing image using AI-powered text instructions (change colors, add/remove objects, swap backgrounds, etc.).\n\n**Use when**: You have an existing image and need to modify it — color changes, background removal, object edits, style transformations, etc.\n\n**Prerequisites** (depends on model):\n    - **Gemini (default)**: Requires base64-encoded image data. If you have a URL, download the image first (e.g., via `aem_dam_asset_download` or `aem_download_asset`) and use the content_base64 from the response.\n    - **Adobe Firefly**: Requires a presigned URL. Call `azure_upload_file` first to upload the image and get a presigned_url. The URL must not be expired.\n\n**Model Selection**:\n    - **'gemini-2.5-flash-image'** (default, recommended): Best for complex edits, color changes, detailed modifications.\n      Input: base64 image data (no URL upload needed). Fast, high quality. Returns base64 result.\n    - **'adobe-firefly'**: Best for creative transformations, artistic style changes.\n      Input: presigned URL (from `azure_upload_file`). Supports multiple variations. Returns image URLs.\n\n**Inputs**:\n    - prompt (str, REQUIRED): Natural language description of the desired changes.\n        Examples: 'Change the background to solid white', 'Make the product blue instead of red',\n        'Remove the person from the image', 'Change colors to #0053E2, #FFC220, #001E60'\n        Tip: Be specific about colors (hex codes), positions, and exact changes.\n    - base_image (str, conditionally REQUIRED): Base64-encoded image data. REQUIRED when model='gemini-2.5-flash-image'.\n        Must be raw base64 string — remove any 'data:image/...;base64,' prefix.\n    - reference_image_url (str, conditionally REQUIRED): Presigned URL to the source image. REQUIRED when model='adobe-firefly'.\n        Obtain by calling `azure_upload_file` first.\n    - reference_image_id (str, optional): Adobe reference image ID. Alternative to reference_image_url for Firefly.\n    - model (str, optional): AI model for editing. Default: 'gemini-2.5-flash-image'.\n        Accepted values:\n            - 'gemini-2.5-flash-image' (default, recommended for most edits)\n            - 'adobe-firefly' (for creative/artistic transformations)\n    - mime_type (str, optional): Image format for Gemini output. Default: 'image/jpeg'.\n        Accepted values: 'image/jpeg', 'image/png', 'image/webp'\n    - width (int, optional): Output width. Default: 2048. Range: 256–2688. Adobe Firefly only.\n    - height (int, optional): Output height. Default: 2048. Range: 256–2688. Adobe Firefly only.\n    - num_variations (int, optional): Number of edit variations. Default: 1. Range: 1–4. Adobe Firefly only.\n    - content_class (str, optional): Content type for Firefly. Default: 'photo'.\n        Accepted values: 'photo' (realistic), 'art' (artistic/illustrated)\n    - visual_intensity (int, optional): Edit strength for Firefly. Default: 2.\n        Accepted values: 1 (subtle), 2 (moderate, recommended), 3 (strong), 4 (maximum)\n\n**Returns**:\n    - status: 'success' | 'error'\n    - images (list): Edited image objects:\n        - For Gemini: [{base64, mimeType}]\n        - For Firefly: [{url, seed}]\n    - prompt (str): Original prompt used\n    - model (str): Model that performed the edit\n    - error_message (str): Error details if failed\n\n**Example** (Gemini — params only, see module docstring for full JSON-RPC wrapper):\n```json\n{\n    \"name\": \"edit_image\",\n    \"arguments\": {\n        \"prompt\": \"Change the background to solid white and make the product blue\",\n        \"base_image\": \"iVBORw0KGgoAAAANSUhEUgAA...\",\n        \"model\": \"gemini-2.5-flash-image\",\n        \"mime_type\": \"image/png\"\n    }\n}\n```\n\n**Example** (Adobe Firefly):\n```json\n{\n    \"name\": \"edit_image\",\n    \"arguments\": {\n        \"prompt\": \"Make this image look like a watercolor painting\",\n        \"reference_image_url\": \"https://cbsmcpserver.blob.core.windows.net/...?sv=...&sig=...\",\n        \"model\": \"adobe-firefly\",\n        \"visual_intensity\": 3,\n        \"content_class\": \"art\"\n    }\n}\n```\n\n**Workflow** (Gemini — recommended, simplest):\n```\nStep 1: Obtain base64 image data (from aem_dam_asset_download, generate_image, or user input)\nStep 2: edit_image(prompt=\"...\", base_image=<base64 data>, model=\"gemini-2.5-flash-image\")\n        → {images: [{base64: \"...\", mimeType: \"image/png\"}]}\n```\n\n**Workflow** (Adobe Firefly — requires URL upload):\n```\nStep 1: azure_upload_file(filename=\"original.jpg\", file_content_base64=<base64>, expiry_hours=2)\n        → {presigned_url: \"https://...\"}\nStep 2: edit_image(prompt=\"...\", reference_image_url=<step1 presigned_url>, model=\"adobe-firefly\")\n        → {images: [{url: \"https://...\", seed: 12345}]}\n```\n\n**Retry**: Safe to retry on network/timeout errors. For Firefly 'Request has expired' errors, re-upload the image via `azure_upload_file` and retry. For 'Invalid base64' errors, ensure the data URI prefix is stripped.\n\n**Related**: azure_upload_file (prerequisite for Firefly), generate_image (create new images), aem_dam_asset_download (get base64 from AEM), aem_upload_asset (save edited image to AEM)",
+                "inputSchema": {
+                    "additionalProperties": false,
+                    "properties": {
+                        "prompt": {
+                            "type": "string"
+                        },
+                        "base_image": {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "default": null
+                        },
+                        "reference_image_id": {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "default": null
+                        },
+                        "reference_image_url": {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "default": null
+                        },
+                        "model": {
+                            "default": "gemini-2.5-flash-image",
+                            "type": "string"
+                        },
+                        "mime_type": {
+                            "default": "image/jpeg",
+                            "type": "string"
+                        },
+                        "width": {
+                            "default": 2048,
+                            "type": "integer"
+                        },
+                        "height": {
+                            "default": 2048,
+                            "type": "integer"
+                        },
+                        "num_variations": {
+                            "default": 1,
+                            "type": "integer"
+                        },
+                        "content_class": {
+                            "default": "photo",
+                            "type": "string"
+                        },
+                        "visual_intensity": {
+                            "default": 2,
+                            "type": "integer"
+                        }
+                    },
+                    "required": [
+                        "prompt"
+                    ],
+                    "type": "object"
+                },
+                "outputSchema": {
+                    "additionalProperties": true,
+                    "type": "object"
+                },
+                "_meta": {
+                    "fastmcp": {
+                        "tags": []
+                    }
+                }
+            },
+            {
+                "name": "azure_upload_file",
+                "description": "Upload a file to Azure Blob Storage and get a presigned URL for Adobe Firefly/Photoshop.\n\n**Purpose**: Upload images/files to cloud storage and get URLs for Adobe APIs\n**Use Case**: Required before using edit_image with Adobe Firefly, Photoshop operations\n\n**IMPORTANT**: Adobe APIs require presigned URLs, not base64. This tool provides those URLs.\n\nArgs:\n    filename (str): **REQUIRED**. Filename with extension.\n        Examples: \"product.jpg\", \"design.psd\", \"logo.png\"\n        **Agent Tip**: Include correct file extension (.jpg, .png, .psd, etc.)\n    \n    file_content_base64 (str, optional): Base64-encoded file content.\n        - **Most common for agents** - use this when you have base64 data\n        - Remove \"data:image/...;base64,\" prefix if present\n        - Just provide raw base64 string\n        - Supports all file types (images, PSDs, etc.)\n    \n    file_url (str, optional): Public URL to download file from.\n        - Tool will download and re-upload to Azure\n        - Useful for copying files from other storage\n    \n    file_path (str, optional): Local file system path.\n        - For local testing only\n        - Not typically used by agents\n    \n    blob_name (str, optional): Custom name for blob in Azure.\n        - If not provided, uses filename\n        - Useful for organizing files\n    \n    expiry_hours (int, optional): Hours until presigned URL expires (default: 24).\n        - Range: 1-168 (1 week max)\n        - **Agent Tip**: Use 2-4 hours for short-lived operations\n        - Adobe operations typically complete in minutes\n\nReturns:\n    Dict with:\n    - status (str): \"success\" or \"error\"\n    - presigned_url (str): **IMPORTANT** - Use this URL for Adobe APIs\n    - blob_name (str): Name of uploaded blob\n    - blob_url (str): Direct blob URL (without SAS token)\n    - expiry (str): When the presigned URL expires (ISO format)\n    - file_size (int): Size of uploaded file in bytes\n    - error_message (str): Error details if failed\n\n**Example 1 - Upload for Adobe Firefly edit_image**:\n    # Step 1: Upload image to get presigned URL\n    upload_result = await azure_upload_file(\n        filename=\"original-product.jpg\",\n        file_content_base64=\"/9j/4AAQSkZJRgABAQAA...\",  # Raw base64\n        expiry_hours=2  # Short expiry for quick operation\n    )\n    \n    # Step 2: Use presigned URL in edit_image\n    if upload_result['status'] == 'success':\n        edit_result = await edit_image(\n            prompt=\"Change background to white\",\n            reference_image_url=upload_result['presigned_url'],\n            model=\"adobe-firefly\"\n        )\n\n**Example 2 - Upload PSD for Photoshop operations**:\n    upload_result = await azure_upload_file(\n        filename=\"template.psd\",\n        file_content_base64=psd_base64_data,\n        expiry_hours=4\n    )\n    psd_url = upload_result['presigned_url']\n    # Use psd_url in Photoshop API calls\n\n**Example 3 - Copy from public URL**:\n    upload_result = await azure_upload_file(\n        filename=\"downloaded-image.jpg\",\n        file_url=\"https://example.com/public/image.jpg\",\n        expiry_hours=24\n    )\n\n**Agent Tips**:\n1. **Always use this before Adobe Firefly edit_image** (when model=\"adobe-firefly\")\n2. **Check expiry**: URLs expire after expiry_hours - plan accordingly\n3. **Remove data URI prefix**: Strip \"data:image/...;base64,\" from base64\n4. **Use short expiry**: 2-4 hours for immediate operations saves storage\n5. **Check status**: Always verify status=\"success\" before using presigned_url\n\n**Common Errors**:\n- \"Invalid base64\": Remove data URI prefix (\"data:image/...;base64,\")\n- \"File too large\": Azure has size limits (typically 100MB+)\n- \"Invalid filename\": Must include file extension\n\n**Workflow Pattern**:\n```\nFor Adobe Firefly image editing:\n1. azure_upload_file (get presigned URL)\n2. edit_image with reference_image_url=presigned_url\n3. Result contains edited image URL or base64\n```",
+                "inputSchema": {
+                    "additionalProperties": false,
+                    "properties": {
+                        "filename": {
+                            "type": "string"
+                        },
+                        "file_content_base64": {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "default": null
+                        },
+                        "file_path": {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "default": null
+                        },
+                        "file_url": {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "default": null
+                        },
+                        "blob_name": {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "default": null
+                        },
+                        "expiry_hours": {
+                            "default": 24,
+                            "type": "integer"
+                        }
+                    },
+                    "required": [
+                        "filename"
+                    ],
+                    "type": "object"
+                },
+                "outputSchema": {
+                    "additionalProperties": true,
+                    "type": "object"
+                },
+                "_meta": {
+                    "fastmcp": {
+                        "tags": []
+                    }
+                }
+            },
+            {
+                "name": "azure_generate_presigned_url",
+                "description": "Generate a presigned URL for a blob in Azure Blob Storage.\n\nThis tool generates a presigned URL without uploading a file.\nUseful for creating output URLs for Adobe Photoshop API.\n\nArgs:\n    blob_name: Name for the blob\n    expiry_hours: Hours until the URL expires (default: 24)\n    permissions: Permission string (r=read, a=add, c=create, w=write, d=delete)\n                Use \"r\" for input files, \"rcw\" for output files\n\nReturns:\n    Dictionary containing:\n    - status: \"success\" or \"error\"\n    - presigned_url: The presigned URL\n    - blob_name: Name of the blob\n    - expiry: Expiration timestamp\n    - permissions: Permissions granted\n\nExample:\n    # For output URL (Adobe will write to this)\n    azure_generate_presigned_url(\n        blob_name=\"output-design.psd\",\n        permissions=\"rcw\"\n    )",
+                "inputSchema": {
+                    "additionalProperties": false,
+                    "properties": {
+                        "blob_name": {
+                            "type": "string"
+                        },
+                        "expiry_hours": {
+                            "default": 24,
+                            "type": "integer"
+                        },
+                        "permissions": {
+                            "default": "racw",
+                            "type": "string"
+                        }
+                    },
+                    "required": [
+                        "blob_name"
+                    ],
+                    "type": "object"
+                },
+                "outputSchema": {
+                    "additionalProperties": true,
+                    "type": "object"
+                },
+                "_meta": {
+                    "fastmcp": {
+                        "tags": []
+                    }
+                }
+            },
+            {
+                "name": "azure_prepare_adobe_psd_urls",
+                "description": "Prepare all presigned URLs needed for Adobe Photoshop API operations.\n\nThis tool handles the complete workflow for Adobe PSD processing:\n1. Uploads the base PSD file (input)\n2. Uploads all layer images (inputs)\n3. Generates an output URL (for Adobe to write the result)\n\nUse this when you need to call Adobe Photoshop API to modify PSDs.\n\nArgs:\n    base_psd_path: Path to the base PSD file on your machine\n    layer_paths: List of paths to layer image files (PNG/JPG)\n    output_blob_name: Name for the output file (e.g., \"result.psd\")\n    expiry_hours: Hours until URLs expire (default: 24)\n\nReturns:\n    Dictionary containing:\n    - status: \"success\" or \"error\"\n    - base_input: {href, storage, blob_name} for base PSD\n    - layer_inputs: [{href, storage, blob_name}] for each layer\n    - output: {href, storage, blob_name} for output\n    - summary: Upload statistics\n    - errors: List of any errors encountered\n\nExample:\n    azure_prepare_adobe_psd_urls(\n        base_psd_path=\"/path/to/template.psd\",\n        layer_paths=[\n            \"/path/to/layer1.png\",\n            \"/path/to/layer2.png\"\n        ],\n        output_blob_name=\"final-design.psd\"\n    )\n    \nThe returned URLs can be used directly in Adobe Photoshop API calls:\n{\n  \"inputs\": [{\"href\": base_input.href, \"storage\": \"azure\"}],\n  \"options\": {\n    \"layers\": [\n      {\"input\": {\"href\": layer_inputs[0].href, \"storage\": \"azure\"}}\n    ]\n  },\n  \"outputs\": [{\"href\": output.href, \"storage\": \"azure\"}]\n}",
+                "inputSchema": {
+                    "additionalProperties": false,
+                    "properties": {
+                        "base_psd_path": {
+                            "type": "string"
+                        },
+                        "layer_paths": {
+                            "items": {},
+                            "type": "array"
+                        },
+                        "output_blob_name": {
+                            "type": "string"
+                        },
+                        "expiry_hours": {
+                            "default": 24,
+                            "type": "integer"
+                        }
+                    },
+                    "required": [
+                        "base_psd_path",
+                        "layer_paths",
+                        "output_blob_name"
+                    ],
+                    "type": "object"
+                },
+                "outputSchema": {
+                    "additionalProperties": true,
+                    "type": "object"
+                },
+                "_meta": {
+                    "fastmcp": {
+                        "tags": []
+                    }
+                }
+            },
+            {
+                "name": "assemble_photoshop_smart_object",
+                "description": "Assemble a Photoshop PSD file by replacing smart object layers with new images.\n\nThis tool takes a base PSD template and replaces specified smart object layers\nwith new images, then outputs the assembled PSD file.\n\nArgs:\n    base_psd_url: URL to the base PSD template file (must be accessible with storage credentials)\n    layers: List of layer replacements, each containing:\n        - name: Layer name in the PSD (e.g., \"IMAGEA\", \"IMAGEB\")\n        - input: Dictionary with:\n            - href: URL to the replacement image\n            - storage: Storage type (default: \"azure\")\n    output_url: URL where the output PSD will be stored\n    storage: Storage type for base PSD and output (default: \"azure\")\n\nReturns:\n    Dictionary containing:\n    - status: \"success\", \"failed\", or \"error\"\n    - job_id: Adobe job identifier\n    - output: Output file details (url, storage, type)\n    - created/modified: Timestamps\n    - errors: Error details if failed\n\nExample:\n    assemble_photoshop_smart_object(\n        base_psd_url=\"https://storage.blob.core.windows.net/container/template.psd?sas_token\",\n        layers=[\n            {\n                \"name\": \"IMAGEA\",\n                \"input\": {\n                    \"href\": \"https://storage.blob.core.windows.net/container/image1.jpg?sas_token\",\n                    \"storage\": \"azure\"\n                }\n            },\n            {\n                \"name\": \"IMAGEB\",\n                \"input\": {\n                    \"href\": \"https://storage.blob.core.windows.net/container/image2.jpg?sas_token\",\n                    \"storage\": \"azure\"\n                }\n            }\n        ],\n        output_url=\"https://storage.blob.core.windows.net/container/output.psd?sas_token\",\n        storage=\"azure\"\n    )",
+                "inputSchema": {
+                    "additionalProperties": false,
+                    "properties": {
+                        "base_psd_url": {
+                            "type": "string"
+                        },
+                        "layers": {
+                            "items": {
+                                "additionalProperties": true,
+                                "type": "object"
+                            },
+                            "type": "array"
+                        },
+                        "output_url": {
+                            "type": "string"
+                        },
+                        "storage": {
+                            "default": "azure",
+                            "type": "string"
+                        }
+                    },
+                    "required": [
+                        "base_psd_url",
+                        "layers",
+                        "output_url"
+                    ],
+                    "type": "object"
+                },
+                "outputSchema": {
+                    "additionalProperties": true,
+                    "type": "object"
+                },
+                "_meta": {
+                    "fastmcp": {
+                        "tags": []
+                    }
+                }
+            },
+            {
+                "name": "convert_photoshop_document",
+                "description": "Convert a Photoshop PSD document to another image format.\n\nThis tool converts PSD files to common image formats like JPEG, PNG, or TIFF.\n\nArgs:\n    input_url: URL to the input PSD file (must be accessible with storage credentials)\n    output_url: URL where the output file will be stored\n    output_format: Output format type. Supported values:\n        - \"image/jpeg\" or \"image/jpg\": JPEG format\n        - \"image/png\": PNG format\n        - \"image/tiff\": TIFF format\n    storage: Storage type (default: \"azure\")\n    quality: Image quality for JPEG (1-12, where 7 is high quality, default: 7)\n\nReturns:\n    Dictionary containing:\n    - status: \"success\", \"failed\", or \"error\"\n    - job_id: Adobe job identifier\n    - output: Output file details (url, storage, type, quality)\n    - created/modified: Timestamps\n    - errors: Error details if failed\n\nExample:\n    convert_photoshop_document(\n        input_url=\"https://storage.blob.core.windows.net/container/design.psd?sas_token\",\n        output_url=\"https://storage.blob.core.windows.net/container/design.jpg?sas_token\",\n        output_format=\"image/jpeg\",\n        storage=\"azure\",\n        quality=7\n    )",
+                "inputSchema": {
+                    "additionalProperties": false,
+                    "properties": {
+                        "input_url": {
+                            "type": "string"
+                        },
+                        "output_url": {
+                            "type": "string"
+                        },
+                        "output_format": {
+                            "type": "string"
+                        },
+                        "storage": {
+                            "default": "azure",
+                            "type": "string"
+                        },
+                        "quality": {
+                            "default": 7,
+                            "type": "integer"
+                        }
+                    },
+                    "required": [
+                        "input_url",
+                        "output_url",
+                        "output_format"
+                    ],
+                    "type": "object"
+                },
+                "outputSchema": {
+                    "additionalProperties": true,
+                    "type": "object"
+                },
+                "_meta": {
+                    "fastmcp": {
+                        "tags": []
+                    }
+                }
+            },
+            {
+                "name": "get_photoshop_document_manifest",
+                "description": "Get comprehensive metadata for a Photoshop PSD file.\n\nThis tool retrieves detailed information about a PSD file including document properties,\nlayer structure, layer metadata, smart objects, text content, and thumbnail URLs.\n\nArgs:\n    input_url: URL to the input PSD file (must be accessible with storage credentials)\n    storage: Storage type (default: \"azure\")\n    thumbnails: Whether to generate thumbnails for layers (default: True)\n    thumbnail_format: Format for thumbnails - \"image/jpeg\" or \"image/png\" (default: \"image/jpeg\")\n\nReturns:\n    Dictionary containing:\n    - status: \"success\", \"failed\", or \"error\"\n    - job_id: Adobe job identifier\n    - document: Document-level metadata including:\n        - width, height: Document dimensions in pixels\n        - imageMode: Color mode (e.g., \"rgb\", \"cmyk\")\n        - bitDepth: Bit depth (8, 16, or 32)\n        - name: Document filename\n        - photoshopBuild: Photoshop version used\n    - layers: Array of layer objects with:\n        - id: Layer ID\n        - index: Layer index in stack\n        - name: Layer name\n        - type: Layer type (e.g., \"smartObject\", \"textLayer\", \"fillLayer\")\n        - bounds: Layer boundaries (left, top, width, height)\n        - visible: Layer visibility\n        - locked: Layer lock status\n        - blendOptions: Blend mode and opacity\n        - thumbnail: URL to layer thumbnail image\n        - smartObject: Smart object details (if applicable)\n        - text: Text content and styling (if text layer)\n        - children: Nested layers (if layer group)\n    - created/modified: Timestamps\n\nExample:\n    get_photoshop_document_manifest(\n        input_url=\"https://storage.blob.core.windows.net/container/design.psd?sas_token\",\n        storage=\"azure\",\n        thumbnails=True,\n        thumbnail_format=\"image/jpeg\"\n    )",
+                "inputSchema": {
+                    "additionalProperties": false,
+                    "properties": {
+                        "input_url": {
+                            "type": "string"
+                        },
+                        "storage": {
+                            "default": "azure",
+                            "type": "string"
+                        },
+                        "thumbnails": {
+                            "default": true,
+                            "type": "boolean"
+                        },
+                        "thumbnail_format": {
+                            "default": "image/jpeg",
+                            "type": "string"
+                        }
+                    },
+                    "required": [
+                        "input_url"
+                    ],
+                    "type": "object"
+                },
+                "outputSchema": {
+                    "additionalProperties": true,
+                    "type": "object"
+                },
+                "_meta": {
+                    "fastmcp": {
+                        "tags": []
+                    }
+                }
+            },
+            {
+                "name": "create_photoshop_document",
+                "description": "Create a new Photoshop (PSD) document from scratch using Adobe Photoshop API.",
+                "inputSchema": {
+                    "additionalProperties": false,
+                    "properties": {
+                        "payload": {
+                            "additionalProperties": true,
+                            "default": {},
+                            "type": "object"
+                        }
+                    },
+                    "type": "object"
+                },
+                "outputSchema": {
+                    "additionalProperties": true,
+                    "type": "object"
+                },
+                "_meta": {
+                    "fastmcp": {
+                        "tags": []
+                    }
+                }
+            },
+            {
+                "name": "create_psd_with_smart_objects",
+                "description": "Create a Photoshop PSD with smartObject layers positioned at specific bounds.\n\nThis tool uses a two-step process to properly position smartObjects:\n1. Creates the document with smartObject layers (Adobe ignores bounds during add)\n2. Applies bounds/positioning to each layer via documentOperations\n\nArgs:\n    document: Document properties:\n        - width: Document width in pixels\n        - height: Document height in pixels\n        - resolution: DPI (default: 72)\n        - fill: Background fill (\"transparent\", \"white\", or color)\n        - mode: Color mode (\"rgb\", \"cmyk\", etc.)\n    layers: List of smartObject layers, each containing:\n        - name: Layer name (required)\n        - input: Dictionary with:\n            - href: URL to the image\n            - storage: Storage type (default: \"azure\")\n        - attributes: Dictionary with:\n            - bounds: {left, top, width, height} - Position and size\n        - mask: Optional mask properties {clip: true/false}\n        - type: Layer type (default: \"smartObject\")\n    output_url: URL where the output PSD will be stored\n    storage: Storage type (default: \"azure\")\n\nReturns:\n    Dictionary containing:\n    - status: \"success\", \"partial\", or \"error\"\n    - output: Output file details (url, storage, type)\n    - job_id: Adobe job identifier\n\nExample:\n    create_psd_with_smart_objects(\n        document={\n            \"width\": 1080,\n            \"height\": 1310,\n            \"resolution\": 72,\n            \"fill\": \"transparent\",\n            \"mode\": \"rgb\"\n        },\n        layers=[\n            {\n                \"name\": \"Lifestyle Photo\",\n                \"input\": {\n                    \"href\": \"https://storage.blob.core.windows.net/image1.jpg?sas\",\n                    \"storage\": \"azure\"\n                },\n                \"attributes\": {\n                    \"bounds\": {\n                        \"left\": 45,\n                        \"top\": 321,\n                        \"width\": 562,\n                        \"height\": 674\n                    }\n                }\n            }\n        ],\n        output_url=\"https://storage.blob.core.windows.net/output.psd?sas\"\n    )",
+                "inputSchema": {
+                    "additionalProperties": false,
+                    "properties": {
+                        "document": {
+                            "additionalProperties": true,
+                            "type": "object"
+                        },
+                        "layers": {
+                            "items": {
+                                "additionalProperties": true,
+                                "type": "object"
+                            },
+                            "type": "array"
+                        },
+                        "output_url": {
+                            "type": "string"
+                        },
+                        "storage": {
+                            "default": "azure",
+                            "type": "string"
+                        }
+                    },
+                    "required": [
+                        "document",
+                        "layers",
+                        "output_url"
+                    ],
+                    "type": "object"
+                },
+                "outputSchema": {
+                    "additionalProperties": true,
+                    "type": "object"
+                },
+                "_meta": {
+                    "fastmcp": {
+                        "tags": []
+                    }
+                }
+            },
+            {
+                "name": "modify_photoshop_document",
+                "description": "Modify an existing Photoshop PSD document by editing layer properties.\n\nThis tool uses the Adobe documentOperations API to modify existing layers\nin a PSD file, such as changing bounds, visibility, or applying masks.\n\nArgs:\n    input_url: URL to the input PSD file\n    layers: List of layer modifications, each containing:\n        - name: Layer name to modify (required)\n        - edit: Empty object {} to indicate edit mode (required for existing layers)\n        - bounds: Optional {left, top, width, height} to reposition/resize\n        - visible: Optional boolean to show/hide layer\n        - mask: Optional mask properties\n    output_url: URL where the modified PSD will be stored\n    storage: Storage type (default: \"azure\")\n\nReturns:\n    Dictionary containing:\n    - status: \"success\", \"failed\", or \"error\"\n    - output: Output file details (url, storage, type)\n    - job_id: Adobe job identifier\n\nExample:\n    modify_photoshop_document(\n        input_url=\"https://storage.blob.core.windows.net/input.psd?sas\",\n        layers=[\n            {\n                \"name\": \"Lifestyle Photo\",\n                \"edit\": {},\n                \"bounds\": {\n                    \"left\": 45,\n                    \"top\": 321,\n                    \"width\": 562,\n                    \"height\": 674\n                }\n            }\n        ],\n        output_url=\"https://storage.blob.core.windows.net/output.psd?sas\"\n    )",
+                "inputSchema": {
+                    "additionalProperties": false,
+                    "properties": {
+                        "input_url": {
+                            "type": "string"
+                        },
+                        "layers": {
+                            "items": {
+                                "additionalProperties": true,
+                                "type": "object"
+                            },
+                            "type": "array"
+                        },
+                        "output_url": {
+                            "type": "string"
+                        },
+                        "storage": {
+                            "default": "azure",
+                            "type": "string"
+                        }
+                    },
+                    "required": [
+                        "input_url",
+                        "layers",
+                        "output_url"
+                    ],
+                    "type": "object"
+                },
+                "outputSchema": {
+                    "additionalProperties": true,
+                    "type": "object"
+                },
+                "_meta": {
+                    "fastmcp": {
+                        "tags": []
+                    }
+                }
+            },
+            {
+                "name": "assemble_photoshop_smart_object_with_bounds",
+                "description": "Create or assemble a PSD with smartObject layers positioned at specific bounds.\n\nSupports two modes:\n1. Template mode: Provide base_psd_url to use existing PSD template\n2. From scratch mode: Provide document to create new PSD\n\nThis tool combines two operations:\n1. Creates/assembles PSD with smartObject layers\n2. Applies bounds/positioning to each layer via documentOperations\n\nArgs:\n    layers: List of smartObject layers, each containing:\n        - name: Layer name (required)\n        - input: Dictionary with:\n            - href: URL to the image\n            - storage: Storage type (default: \"azure\")\n        - attributes: Optional dictionary with:\n            - bounds: {left, top, width, height} - Position and size\n        - mask: Optional mask properties {clip: true/false}\n        - type: Layer type (default: \"smartObject\")\n    output_url: URL where the output PSD will be stored\n    base_psd_url: Optional URL to base PSD template (for template mode)\n    document: Optional document properties for creating from scratch:\n        - width: Document width in pixels\n        - height: Document height in pixels\n        - resolution: DPI (default: 72)\n        - fill: Background fill (\"transparent\", \"white\", or color)\n        - mode: Color mode (\"rgb\", \"cmyk\", etc.)\n    storage: Storage type (default: \"azure\")\n\nReturns:\n    Dictionary containing:\n    - status: \"success\", \"partial\", or \"error\"\n    - output: Output file details (url, storage, type)\n    - job_id: Adobe job identifier\n\nExample (Template mode):\n    assemble_photoshop_smart_object_with_bounds(\n        base_psd_url=\"https://storage.blob.core.windows.net/template.psd?sas\",\n        layers=[\n            {\n                \"name\": \"Lifestyle Photo\",\n                \"input\": {\"href\": \"https://.../image1.jpg?sas\", \"storage\": \"azure\"},\n                \"attributes\": {\"bounds\": {\"left\": 45, \"top\": 321, \"width\": 562, \"height\": 674}}\n            }\n        ],\n        output_url=\"https://storage.blob.core.windows.net/output.psd?sas\"\n    )\n\nExample (From scratch mode):\n    assemble_photoshop_smart_object_with_bounds(\n        document={\"width\": 1080, \"height\": 1140, \"resolution\": 72, \"fill\": \"transparent\", \"mode\": \"rgb\"},\n        layers=[\n            {\n                \"name\": \"Lifestyle Photo\",\n                \"input\": {\"href\": \"https://.../image1.jpg?sas\", \"storage\": \"azure\"},\n                \"attributes\": {\"bounds\": {\"left\": 45, \"top\": 321, \"width\": 562, \"height\": 674}}\n            }\n        ],\n        output_url=\"https://storage.blob.core.windows.net/output.psd?sas\"\n    )",
+                "inputSchema": {
+                    "additionalProperties": false,
+                    "properties": {
+                        "layers": {
+                            "items": {
+                                "additionalProperties": true,
+                                "type": "object"
+                            },
+                            "type": "array"
+                        },
+                        "output_url": {
+                            "type": "string"
+                        },
+                        "base_psd_url": {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "default": null
+                        },
+                        "document": {
+                            "anyOf": [
+                                {
+                                    "additionalProperties": true,
+                                    "type": "object"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "default": null
+                        },
+                        "storage": {
+                            "default": "azure",
+                            "type": "string"
+                        }
+                    },
+                    "required": [
+                        "layers",
+                        "output_url"
+                    ],
+                    "type": "object"
+                },
+                "outputSchema": {
+                    "additionalProperties": true,
+                    "type": "object"
+                },
+                "_meta": {
+                    "fastmcp": {
+                        "tags": []
+                    }
+                }
+            },
+            {
+                "name": "get_images_by_item_ids",
+                "description": "Scrape Walmart.com to retrieve all product images for a list of Walmart Item IDs.\n\n**Use when**: You need product images from Walmart.com (NOT AEM DAM) for creative workflows or reference.\n\n**Prerequisites**: None. Standalone tool. Scrapes public Walmart.com pages.\n\n**Note**: This scrapes Walmart.com, NOT AEM DAM. For DAM searches, use aem_search_assets or aem_dam_asset_search.\n\n**Inputs**:\n    - item_ids (str | list[str], REQUIRED): Walmart Item IDs.\n        Formats accepted:\n            - Comma-separated string: \"5674105844,5176689262\"\n            - List of strings: [\"5674105844\", \"5176689262\"]\n    - max_items (int, optional): Max Item IDs to process. Default: 10.\n\n**Returns**:\n    - status: 'success' | 'error'\n    - results: array of per-item results:\n        - item_id: str\n        - status: 'success' | 'error'\n        - images: array with url, type, width, height\n        - product_name: str\n        - error: str (if failed)\n    - summary: {total: int, successful: int, failed: int}\n\n**Example** (params only, see module docstring for full JSON-RPC wrapper):\n```json\n{\n    \"name\": \"get_images_by_item_ids\",\n    \"arguments\": {\n        \"item_ids\": \"5674105844,5176689262\",\n        \"max_items\": 10\n    }\n}\n```\n\n**Example** (List format):\n```json\n{\n    \"name\": \"get_images_by_item_ids\",\n    \"arguments\": {\n        \"item_ids\": [\"5674105844\", \"5176689262\"]\n    }\n}\n```\n\n**Retry**: Safe on network errors. Check summary.failed to retry specific items.\n\n**Related**: aem_search_assets (DAM by ItemID), aem_dam_asset_search (DAM OData), scrape_url (general scraping)",
+                "inputSchema": {
+                    "additionalProperties": false,
+                    "properties": {
+                        "item_ids": {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "items": {
+                                        "type": "string"
+                                    },
+                                    "type": "array"
+                                }
+                            ]
+                        },
+                        "max_items": {
+                            "default": 10,
+                            "type": "integer"
+                        }
+                    },
+                    "required": [
+                        "item_ids"
+                    ],
+                    "type": "object"
+                },
+                "outputSchema": {
+                    "additionalProperties": true,
+                    "type": "object"
+                },
+                "_meta": {
+                    "fastmcp": {
+                        "tags": []
+                    }
+                }
+            },
+            {
+                "name": "search_assets_in_catalog",
+                "description": "Search for product images in the Walmart Catalog by Item ID.\n\n**Use when**: You need to retrieve product images directly from the Walmart Catalog (NOT AEM DAM).\n\n**Prerequisites**: None. Standalone tool.\n\n**Note**: This searches the Walmart Catalog via GraphQL API, NOT AEM DAM. For DAM searches, use aem_search_assets or aem_dam_asset_search.\n\n**Inputs**:\n    - item_id (str, REQUIRED): Walmart Item ID to search for.\n        Example: '16785918403'\n\n**Returns**:\n    - status: 'success' | 'error'\n    - item_id: str (the searched item ID)\n    - thumbnail_url: str (URL to product thumbnail)\n    - images: array of image objects with:\n        - url: str (full image URL)\n        - id: str (image identifier, if available)\n        - zoomable: bool (whether image supports zoom)\n    - total_images: int (count of images found)\n    - error_message: str (if error)\n\n**Example** (params only, see module docstring for full JSON-RPC wrapper):\n```json\n{\n    \"name\": \"search_assets_in_catalog\",\n    \"arguments\": {\n        \"item_id\": \"16785918403\"\n    }\n}\n```\n\n**Retry**: Safe on network errors.\n\n**Related**: get_images_by_item_ids (scrapes Walmart.com), aem_search_assets (DAM by ItemID), aem_dam_asset_search (DAM OData)",
+                "inputSchema": {
+                    "additionalProperties": false,
+                    "properties": {
+                        "item_id": {
+                            "type": "string"
+                        }
+                    },
+                    "required": [
+                        "item_id"
+                    ],
+                    "type": "object"
+                },
+                "outputSchema": {
+                    "additionalProperties": true,
+                    "type": "object"
+                },
+                "_meta": {
+                    "fastmcp": {
+                        "tags": []
+                    }
+                }
+            },
+            {
+                "name": "agent_fallback_action",
+                "description": "Handles requests that cannot be fulfilled by existing MCP tools. Provides intelligent fallback responses\nwith summaries, next steps, and workarounds when the agent encounters unsupported actions.\n\n**Purpose**: Graceful degradation when no suitable tool exists for the user's request\n**Use Case**: Agent calls this when tool selection fails or user requests unsupported actions (email, notifications, scheduling, etc.)\n\n**When to Use**:\n- User requests an action not supported by any available tool (e.g., \"send email\", \"trigger notification\")\n- Tool selection returns empty list\n- All selected tools fail to execute\n- User explicitly requests integration with external systems\n\n**Common Unsupported Actions**:\n- Email sending (send_email, mail, email campaign)\n- SMS/Push notifications (send_notification, alert, notify)\n- Scheduling (schedule, set reminder, calendar event)\n- File exports (export to Excel, download as PDF)\n- External integrations (sync with, connect to, integrate)\n\nArgs:\n    user_request (str, REQUIRED): The original user request that could not be fulfilled\n    requested_action (str, REQUIRED): The specific action the user wanted (e.g., 'send email', 'trigger notification')\n    available_tools (list[str], optional): List of tool names that were available but didn't match\n    actions_taken (list[dict], optional): Actions the agent took before reaching fallback. Each dict should contain:\n        - tool_name (str): Name of the tool executed\n        - parameters (dict): Parameters used\n        - result_summary (str): Brief summary of the result\n        - success (bool): Whether execution succeeded\n    context (dict, optional): Additional conversation/workflow context:\n        - conversation_history: Recent conversation turns\n        - workflow_state: Current state (e.g., 'content_generated')\n    model (str, optional): LLM model for generating response. Default: \"gpt-4.1-mini\"\n\nReturns:\n    Dict with:\n    - status (str): 'success' or 'error'\n    - summary (dict):\n        - user_intent (str): Interpreted user intent\n        - actions_summary (str): What the agent successfully did\n        - capability_gap (str): Why the action cannot be performed\n    - next_steps (list[dict]): Actionable steps user can take:\n        - step_number (int)\n        - action (str): What to do\n        - how_to (str): Instructions\n        - tool_suggestion (str): Potential tool name if one could be built\n    - alternative_approaches (list[dict]): Alternative ways to achieve the goal:\n        - approach (str): Alternative method\n        - available_tools (list[str]): Existing tools that could help\n        - description (str): How it would work\n    - workaround (dict):\n        - available (bool): Whether a workaround exists\n        - description (str): Workaround description\n        - steps (list[str]): Step-by-step instructions\n    - model_used (str): LLM model used\n    - timestamp (str): ISO 8601 timestamp\n\nExample (params only, see module docstring for full JSON-RPC wrapper):\n```json\n{\n    \"name\": \"agent_fallback_action\",\n    \"arguments\": {\n        \"user_request\": \"Generate push notifications and send them via email to Sam's Club members\",\n        \"requested_action\": \"send email\",\n        \"available_tools\": [\"generate_push_notifications\", \"evaluate_content\", \"scrape_url\"],\n        \"actions_taken\": [\n            {\n                \"tool_name\": \"generate_push_notifications\",\n                \"parameters\": {\"campaign_brief\": {\"goal\": \"Remind inactive members\"}},\n                \"result_summary\": \"Generated 5 notifications with evaluation scores\",\n                \"success\": true\n            }\n        ],\n        \"context\": {\n            \"workflow_state\": \"notifications_generated\"\n        },\n        \"model\": \"gpt-4.1-mini\"\n    }\n}\n```\n\n**Agent Integration Tips**:\n1. Call this tool when tool_selection returns empty list\n2. Detect action keywords: email, send, notify, schedule, export, integrate\n3. Pass all actions taken so far for context\n4. Use the response to provide clear guidance to the user\n\n**UI Rendering**: The response is structured for rich UI display with sections for\nsummary, next steps, alternatives, and workarounds. Frontend should render these\nas distinct visual components.\n\n**Related**: This is a meta-tool that helps the agent handle gaps in the tool ecosystem.\nConsider creating dedicated tools for frequently requested actions.",
+                "inputSchema": {
+                    "additionalProperties": false,
+                    "properties": {
+                        "user_request": {
+                            "type": "string"
+                        },
+                        "requested_action": {
+                            "type": "string"
+                        },
+                        "available_tools": {
+                            "anyOf": [
+                                {
+                                    "items": {
+                                        "type": "string"
+                                    },
+                                    "type": "array"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "default": null
+                        },
+                        "actions_taken": {
+                            "anyOf": [
+                                {
+                                    "items": {
+                                        "additionalProperties": true,
+                                        "type": "object"
+                                    },
+                                    "type": "array"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "default": null
+                        },
+                        "context": {
+                            "anyOf": [
+                                {
+                                    "additionalProperties": true,
+                                    "type": "object"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "default": null
+                        },
+                        "model": {
+                            "default": "gpt-4.1-mini",
+                            "type": "string"
+                        }
+                    },
+                    "required": [
+                        "user_request",
+                        "requested_action"
+                    ],
+                    "type": "object"
+                },
+                "outputSchema": {
+                    "additionalProperties": true,
+                    "type": "object"
+                },
+                "_meta": {
+                    "fastmcp": {
+                        "tags": []
+                    }
+                }
+            },
+            {
+                "name": "enhance_image_prompt",
+                "description": "Enhances a simple user prompt into a detailed, descriptive prompt for image generation.\n\nArgs:\n    user_prompt: The basic prompt from the user (e.g., \"a cat on a couch\").\n    style: The desired style of the final image (e.g., \"photorealistic\", \"cinematic\", \"watercolor\").\n    model_name: Optional. The specific text model to use for enhancement (e.g., 'gpt-5-mini').\n\nReturns:\n    A dictionary with the enhanced prompt.",
+                "inputSchema": {
+                    "additionalProperties": false,
+                    "properties": {
+                        "user_prompt": {
+                            "type": "string"
+                        },
+                        "style": {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "default": "photorealistic"
+                        },
+                        "model_name": {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "default": null
+                        }
+                    },
+                    "required": [
+                        "user_prompt"
+                    ],
+                    "type": "object"
+                },
+                "outputSchema": {
+                    "additionalProperties": true,
+                    "type": "object"
+                },
+                "_meta": {
+                    "fastmcp": {
+                        "tags": []
+                    }
+                }
+            },
+            {
+                "name": "manage_prompt_suggestions",
+                "description": "Manage the prompt improvement feedback loop: generate suggestions from reviewer comments,\nreview them, then approve or reject. Prompts are stored in GCS (gs://push-notifications-cbs/prompts/)\nand updated versions take effect immediately — no redeployment needed.\n\n**Actions** (set via `action` param):\n\n- **'generate'**: Pull review comments from GCS regeneration CSVs → LLM distills them into\n  actionable rules → saves as pending suggestions for human review.\n- **'review'**: View the pending suggestions before deciding to apply or discard them.\n- **'approve'**: Apply pending suggestions to the active prompt, creating a new versioned snapshot.\n  Optionally append your own `custom_additions` text alongside or instead of LLM suggestions.\n- **'reject'**: Discard pending suggestions without applying. Optionally provide a `reason`.\n\n**Inputs**:\n    - action (str, REQUIRED): One of 'generate', 'review', 'approve', 'reject'.\n    - prompt_name (str, REQUIRED): Which prompt to manage.\n        Accepted values:\n            - 'push_notification_headline' (Stage 1 headline generation)\n            - 'push_notification_body' (Stage 2 body copy generation)\n            - 'push_notification_regeneration' (regeneration from review comments)\n            - 'push_notification_evaluation' (evaluation prompt)\n    - model_name (str, optional): LLM model for distillation. Default: 'gpt-5-mini'. Used with 'generate'.\n    - author (str, optional): Who is approving. Default: 'human_reviewer'. Used with 'approve'.\n    - custom_additions (str, optional): Extra rules to append to the prompt. Used with 'approve'.\n    - reason (str, optional): Why suggestions were rejected. Used with 'reject'.\n\n**Returns**:\n    - status: 'success' | 'no_comments' | 'no_suggestions' | 'error'\n    - For 'generate': suggestions object with themes, rules, and formatted prompt additions\n    - For 'review': pending suggestions object plus:\n        - rules: flat list of extracted rules (each with rule text, theme, source_comments_count,\n          inserted_into_section, avoid_examples, prefer_examples) — ready for UI display\n        - change_percentage: { changed_pct, unchanged_pct, original_char_count, rewritten_char_count }\n    - For 'approve': version number, label, author of the new prompt version\n    - For 'reject': confirmation message\n\n**Typical workflow**:\n```\nStep 1: manage_prompt_suggestions(action=\"generate\", prompt_name=\"push_notification_headline\")\nStep 2: manage_prompt_suggestions(action=\"review\",   prompt_name=\"push_notification_headline\")\nStep 3: manage_prompt_suggestions(action=\"approve\",  prompt_name=\"push_notification_headline\", author=\"your_name\")\n```\n\n**Rollback**: If the updated prompt causes issues, use `manage_prompt_versions(action=\"rollback\", ...)`.",
+                "inputSchema": {
+                    "additionalProperties": false,
+                    "properties": {
+                        "action": {
+                            "type": "string"
+                        },
+                        "prompt_name": {
+                            "type": "string"
+                        },
+                        "model_name": {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "default": "gpt-5-mini"
+                        },
+                        "author": {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "default": "human_reviewer"
+                        },
+                        "custom_additions": {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "default": null
+                        },
+                        "reason": {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "default": ""
+                        }
+                    },
+                    "required": [
+                        "action",
+                        "prompt_name"
+                    ],
+                    "type": "object"
+                },
+                "outputSchema": {
+                    "additionalProperties": true,
+                    "type": "object"
+                },
+                "_meta": {
+                    "fastmcp": {
+                        "tags": []
+                    }
+                }
+            },
+            {
+                "name": "manage_prompt_versions",
+                "description": "Manage versioned prompts in GCS: list all versions, inspect a specific version, or rollback\nto a previous version.\n\n**Actions** (set via `action` param):\n\n- **'list'**: List all versions of a prompt with metadata (version number, timestamp, author, char count).\n- **'get'**: Retrieve the full text content of a specific version (requires `version_label`).\n- **'rollback'**: Revert the active prompt to a previous version. Creates a new traceable\n  version that is a copy of the target (so even rollbacks are versioned).\n\n**Inputs**:\n    - action (str, REQUIRED): One of 'list', 'get', 'rollback'.\n    - prompt_name (str, REQUIRED): Which prompt to manage.\n        Accepted values: 'push_notification_headline', 'push_notification_body',\n        'push_notification_regeneration', 'push_notification_evaluation'\n    - version_label (str, REQUIRED for 'get', OPTIONAL for 'rollback'): Version label from 'list' results.\n        Example: 'v2_20250224_140000'\n        For 'rollback': if omitted, automatically rolls back to the previous version (current - 1).\n    - author (str, optional): Who is performing the rollback. Default: 'system'. Used with 'rollback'.\n\n**Returns**:\n    - For 'list': current_version, active_label, list of version entries\n    - For 'get': full prompt content and char_count\n    - For 'rollback': new version number, label, author\n\n**Example**:\n```\nStep 1: manage_prompt_versions(action=\"list\", prompt_name=\"push_notification_headline\")\n        → {current_version: 3, active_label: \"v3_...\", versions: [...]}\nStep 2: manage_prompt_versions(action=\"get\", prompt_name=\"push_notification_headline\", version_label=\"v1_20250224_103000\")\n        → {content: \"...\", char_count: 5000}\nStep 3: manage_prompt_versions(action=\"rollback\", prompt_name=\"push_notification_headline\")\n        → rolls back to previous version (current - 1)\nStep 3 (alt): manage_prompt_versions(action=\"rollback\", prompt_name=\"push_notification_headline\", version_label=\"v1_20250224_103000\")\n        → rolls back to specific version v1\n```",
+                "inputSchema": {
+                    "additionalProperties": false,
+                    "properties": {
+                        "action": {
+                            "type": "string"
+                        },
+                        "prompt_name": {
+                            "type": "string"
+                        },
+                        "version_label": {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "default": null
+                        },
+                        "author": {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "default": "system"
+                        }
+                    },
+                    "required": [
+                        "action",
+                        "prompt_name"
+                    ],
+                    "type": "object"
+                },
+                "outputSchema": {
+                    "additionalProperties": true,
+                    "type": "object"
+                },
+                "_meta": {
+                    "fastmcp": {
+                        "tags": []
+                    }
+                }
+            },
+            {
+                "name": "seed_prompt_to_gcs",
+                "description": "Upload an initial prompt to GCS for the first time. This seeds the versioned prompt system.\nIf an active prompt already exists for this name, this tool does nothing (safe to re-run).\n\n**Use when**: Setting up a new prompt for the first time, or migrating an existing hardcoded\nprompt from content_prompts.json to the GCS versioned system.\n\n**Inputs**:\n    - prompt_name (str, REQUIRED): Prompt identifier.\n        Accepted values: 'push_notification_headline', 'push_notification_body',\n        'push_notification_regeneration', 'push_notification_evaluation'\n    - prompt_text (str, REQUIRED): The full prompt text to seed.\n    - author (str, optional): Who is seeding. Default: 'seed'.\n\n**Returns**:\n    - status: 'success' | 'already_exists' | 'error'\n    - version: 1 (first version)",
+                "inputSchema": {
+                    "additionalProperties": false,
+                    "properties": {
+                        "prompt_name": {
+                            "type": "string"
+                        },
+                        "prompt_text": {
+                            "type": "string"
+                        },
+                        "author": {
+                            "default": "seed",
+                            "type": "string"
+                        }
+                    },
+                    "required": [
+                        "prompt_name",
+                        "prompt_text"
+                    ],
+                    "type": "object"
+                },
+                "outputSchema": {
+                    "additionalProperties": true,
+                    "type": "object"
+                },
+                "_meta": {
+                    "fastmcp": {
+                        "tags": []
+                    }
+                }
+            }
+        ]
+    }
+}

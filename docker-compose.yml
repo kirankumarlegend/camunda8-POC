@@ -1,0 +1,124 @@
+version: "3.8"
+
+services:
+  # Zeebe - Workflow Engine
+  zeebe:
+    image: camunda/zeebe:8.5.0
+    container_name: zeebe
+    ports:
+      - "26500:26500"  # Gateway API
+      - "9600:9600"    # Monitoring
+    environment:
+      - ZEEBE_BROKER_EXPORTERS_ELASTICSEARCH_CLASSNAME=io.camunda.zeebe.exporter.ElasticsearchExporter
+      - ZEEBE_BROKER_EXPORTERS_ELASTICSEARCH_ARGS_URL=http://elasticsearch:9200
+      - ZEEBE_BROKER_EXPORTERS_ELASTICSEARCH_ARGS_BULK_SIZE=1
+    volumes:
+      - zeebe-data:/usr/local/zeebe/data
+    networks:
+      - camunda-network
+    healthcheck:
+      test: ["CMD-SHELL", "timeout 10s bash -c ':> /dev/tcp/127.0.0.1/9600' || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+
+  # Elasticsearch - Data Storage
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.9.0
+    container_name: elasticsearch
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    volumes:
+      - elastic-data:/usr/share/elasticsearch/data
+    networks:
+      - camunda-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+
+  # Operate - Workflow Monitoring UI
+  operate:
+    image: camunda/operate:8.5.0
+    container_name: operate
+    ports:
+      - "8081:8080"
+    environment:
+      - CAMUNDA_OPERATE_ZEEBE_GATEWAYADDRESS=zeebe:26500
+      - CAMUNDA_OPERATE_ELASTICSEARCH_URL=http://elasticsearch:9200
+      - CAMUNDA_OPERATE_ZEEBEELASTICSEARCH_URL=http://elasticsearch:9200
+    depends_on:
+      zeebe:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+    networks:
+      - camunda-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  # Tasklist - User Task Management UI
+  tasklist:
+    image: camunda/tasklist:8.5.0
+    container_name: tasklist
+    ports:
+      - "8082:8080"
+    environment:
+      - CAMUNDA_TASKLIST_ZEEBE_GATEWAYADDRESS=zeebe:26500
+      - CAMUNDA_TASKLIST_ELASTICSEARCH_URL=http://elasticsearch:9200
+      - CAMUNDA_TASKLIST_ZEEBEELASTICSEARCH_URL=http://elasticsearch:9200
+    depends_on:
+      zeebe:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+    networks:
+      - camunda-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  # Connectors - Pre-built integrations (optional but useful)
+  connectors:
+    image: camunda/connectors-bundle:8.5.0
+    container_name: connectors
+    ports:
+      - "8085:8080"
+    environment:
+      - ZEEBE_CLIENT_BROKER_GATEWAY-ADDRESS=zeebe:26500
+      - ZEEBE_CLIENT_SECURITY_PLAINTEXT=true
+      - CAMUNDA_OPERATE_CLIENT_URL=http://operate:8080
+      - CAMUNDA_OPERATE_CLIENT_USERNAME=demo
+      - CAMUNDA_OPERATE_CLIENT_PASSWORD=demo
+    depends_on:
+      zeebe:
+        condition: service_healthy
+      operate:
+        condition: service_healthy
+    networks:
+      - camunda-network
+
+volumes:
+  zeebe-data:
+    driver: local
+  elastic-data:
+    driver: local
+
+networks:
+  camunda-network:
+    driver: bridge
