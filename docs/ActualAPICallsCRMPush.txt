@@ -1,0 +1,403 @@
+get workfront metadata : 
+
+curl --location 'https://cbs-content-mcp-server.cbs-mcp.dev.k8s.walmart.net/api/workfront-get-metadata?project_id=69b18b90000050500e6247facdd92998&field_names=DE%3ACopy%20Direction' \
+--header 'Content-Type: application/json'
+
+response : 
+{
+    "status": "success",
+    "data": {
+        "project_id": "69b18b90000050500e6247facdd92998",
+        "workfront_url": null,
+        "DE:Copy Direction": "{\"blocks\":[{\"key\":\"6oqol\",\"text\":\"Creative Brief\\nCampaign: Flash Deals – CRM Push Notifications\\n1. Creative Objective\\nCreate high-impact, urgency-driven push notifications that immediately communicate value\\nand trigger impulse purchases.\\n2. Core Message\\nAct Now. Save Big. Limited Time.\\n3. Audience Insight\\nConsumers respond to time-bound deals, high perceived savings, scarcity cues, and\\npersonalization. They ignore generic, overly long, or repetitive promotional messages.\\n4. Value Proposition\\nDeep savings on high-demand products for a limited time, accessible instantly via the app.\\n5. Tone & Voice\\n- Energetic\\n- Urgent\\n- Direct\\n- Clear\\n- Minimal clutter\\n6. Messaging Framework\\nHeadline Structures:\\n- Up to 40% Off — Today Only\\n- 4 Hours Left: Flash Deals Live\\n- Electronics Flash Sale — Ends 7PM\\n- {{FirstName}}, Your Favorite Deals Are Live\\n7. Sample Push Copy\\nExample 1:\\nTitle: Flash Deals Are Live\\nBody: Up to 40% off top picks. Ends in 4 hours. Shop now.\\nExample 2:\\nTitle: 3 Hours Left\\nBody: Last chance to grab today’s biggest deals.\\n8. CTA Strategy\\nPrimary CTAs:\\n- Shop Now\",\"type\":\"unstyled\",\"depth\":0,\"inlineStyleRanges\":[],\"entityRanges\":[],\"data\":{}},{\"key\":\"9v8p9\",\"text\":\"- View Deals\\n- See Offers\\nAvoid soft CTAs like Learn More.\\n9. Guardrails\\n- Title: 40–60 characters\\n- Body: Under 90 characters\\n- Limit emoji usage\\n- Frequency capped\\n- Deep link tested\\n10. Personalization Tokens\\n- {{FirstName}}\\n- {{FavoriteCategory}}\\n- {{NearestStore}}\\n- {{DiscountPercentage}}\\n- {{CountdownTime}}\\n11. Approval Checklist\\n- Offer accuracy validated\\n- Deep link QA complete\\n- Personalization QA complete\\n- Inventory logic validated\\n- Segmentation exclusions confirmed\",\"type\":\"unstyled\",\"depth\":0,\"inlineStyleRanges\":[],\"entityRanges\":[],\"data\":{}}],\"entityMap\":{}}"
+    }
+}
+
+
+get workfront metadata all project data : 
+curl --location 'https://cbs-content-mcp-server.cbs-mcp.dev.k8s.walmart.net/api/workfront-get-metadata?project_id=69b18b90000050500e6247facdd92998' \
+--header 'Content-Type: application/json'
+
+response : 
+{
+    "status": "success",
+    "data": {
+        "project_id": "69b18b90000050500e6247facdd92998",
+        "workfront_url": null,
+        "ID": "69b18b90000050500e6247facdd92998",
+        "name": "CBS CRM Test Project",
+        "referenceNumber": "8509251",
+        "status": "PLN",
+        "previousStatus": "PLN",
+        "progressStatus": "LT",
+        "condition": "IT",
+        "percentComplete": "0",
+        "actualStartDate": "",
+        "plannedStartDate": "2026-02-10T17:32:00.000Z",
+        "plannedCompletionDate": "2026-02-12T17:32:00.000Z",
+        "estCompletionDate": "2026-03-13T00:00:00.000Z",
+        "projectedCompletionDate": "2026-03-13T00:00:00.000Z",
+        "lastUpdateDate": "2026-03-11T15:37:18.058Z",
+        "entryDate": "2026-03-11T15:34:40.163Z",
+        "owner": "Kyle Loux",
+        "sponsor": "",
+        "enteredBy": "Kyle Loux",
+        "lastUpdatedBy": "Kyle Loux",
+        "totalTaskCount": "26",
+        "totalOpTaskCount": "0",
+        "group": "Walmart Performance Marketing - CRM",
+        "portfolio": "WCS-Food",
+        "team": "CBS CRM Test Project",
+        "category": "CRM Push Instruction Form V2",
+        "queueDef": "69b18b90000050730aeddd7b383e4c55",
+        "DE:Division": "FOD",
+        "DE:Vertical": "Food",
+        "DE:Subcategory": "Liquor/Wine/Beer",
+        "DE:Creative Project Name": "Test",
+        "DE:Creative Request Name": "test",
+        "DE:Project Reference Number": "test",
+        "DE:Request Reference Number": "test",
+        "DE:WF Creative Project Number": "1234",
+        "DE:Send Date": "2026-02-13",
+        "DE:Creative Run Start Date": "2026-03-19",
+        "DE:Brief Due Date": "2026-02-13",
+        "DE:Creative Project Owner Calc": "Kyle Loux",
+        "DE:Additional Reviewers": "",
+        "DE:Additional Approvers": "",
+        "DE:WCS - Creative AM": "",
+        "DE:Overview / objective of request": "",
+        "DE:AEM Project Link": "",
+        "DE:Confidential?": "No",
+        "DE:Requested handoff date": "2026-02-13",
+        "DE:Type of marketing asset": "",
+        "DE:WCS - Content Type": "Copy",
+        "Workfront Project Link": "https://walmart.sb01.workfront.adobe.com/project/69b18b90000050500e6247facdd92998"
+    }
+}
+
+generate and evaluate Push notifications MCP tool call : 
+curl --location 'http://localhost:8080/mcp' \
+--header 'Content-Type: application/json' \
+--header 'Accept: application/json,text/event-stream' \
+--data '{
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "tools/call",
+    "params": {
+        "name": "generate_push_notifications",
+        "arguments": {
+            "page_url": "https://www.walmart.com/shop/deals/clearance",
+            "messaging_strategy": "all",
+            "emoji_usage": "medium",
+            "num_notifications": 2,
+            "model_name": "gpt-5-mini"
+        }
+    }
+}'
+
+
+Response : 
+Connection closed
+12:33:03.258
+message
+
+{
+    "jsonrpc": "2.0",
+    "id": 1,
+    "result": {
+        "content": [
+            {
+                "type": "text",
+                "text": "{\"status\":\"success\",\"data\":{\"page_url\":\"https://www.walmart.com/shop/deals/clearance\",\"messaging_strategy\":\"all\",\"emoji_usage\":\"medium\",\"num_notifications\":2,\"model_used\":\"gpt-5-mini\",\"tenant\":\"walmart\",\"locale\":\"en_US\",\"generation_mode\":\"consolidated\",\"notifications\":[{\"headline\":\"Clearance: low home prices 🏷️\",\"body_copy\":\"Low prices on home décor & furniture. Tap to browse clearance.\",\"hook\":\"Value/Deal\"},{\"headline\":\"Clearance going fast 💨\",\"body_copy\":\"Don’t miss clearance items in toys, fashion & home. Tap to shop.\",\"hook\":\"FOMO/Urgency\"}],\"evaluation\":{\"results\":[{\"model_name\":\"gpt-5-mini\",\"batch_evaluations\":[{\"notification_id\":1,\"headline\":\"Clearance: low home prices 🏷️\",\"body_copy\":\"Low prices on home décor & furniture. Tap to browse clearance.\",\"declared_strategy\":\"Value/Deal\",\"declared_emoji_usage\":\"medium\",\"metrics\":{\"brand_safety_compliance\":{\"score\":\"A\",\"reason\":\"Brand Voice: Conversational, captivating, and confident — uses simple, direct language like 'Low prices' and the clear CTA 'Tap to browse'. Brand Safety: No violations detected. Customer Safety: No issues found.\"},\"technical_format_constraints\":{\"score\":\"A\",\"reason\":\"Char Limits: Headline 28 chars, Body 62 chars - Within optimal. Formatting: Clean sentence case, uses '&', body has proper terminal punctuation. Prohibited Terms: None.\"},\"emoji_standards\":{\"score\":\"A\",\"reason\":\"Emoji Policy: 1 in headline, 0 in body (medium policy compliant), emoji placed at end of headline. Accessibility: Emoji is semantic (🏷️ supports pricing/message), message is understandable without emoji, no body-part emojis.\"},\"message_strategy_structure\":{\"score\":\"A\",\"reason\":\"Strategy: Value/deal clearly expressed in both headline ('low home prices') and body ('Low prices on home décor & furniture'). Single Objective: Single clearance/value focus maintained (home décor & furniture are within one theme). Coherence: Body expands the headline without introducing other themes.\"},\"content_quality_accuracy\":{\"score\":\"A\",\"reason\":\"Copy Quality: Strong front-load 'Clearance' and clear value 'Low prices' — concise and attention-getting. CTA: Embedded 'Tap to browse' uses approved verbs and is mobile-first. Relevance: Aligned with the clearance landing page and PageContext categories (Home, Furniture). Hallucination: No unsupported claims.\"}},\"verdict\":\"approved\",\"summary_reason\":\"All metrics needs are adequately met.\",\"id\":1,\"summary\":{\"verdict\":\"approved\",\"overall_score\":0,\"reason\":\"\"}},{\"notification_id\":2,\"headline\":\"Clearance going fast 💨\",\"body_copy\":\"Don’t miss clearance items in toys, fashion & home. Tap to shop.\",\"declared_strategy\":\"FOMO/Urgency\",\"declared_emoji_usage\":\"medium\",\"metrics\":{\"brand_safety_compliance\":{\"score\":\"A\",\"reason\":\"Brand Voice: Conversational and confident — uses the direct imperative 'Don’t miss' and plain language like 'clearance items'. Brand Safety: No violations detected. Customer Safety: No issues found.\"},\"technical_format_constraints\":{\"score\":\"B\",\"reason\":\"Char Limits: Headline 22 chars, Body 64 chars - Within limits but headline is below the optimal 25–30 range. Formatting: Clean sentence case, uses '&', body punctuation correct. Prohibited Terms: None.\"},\"emoji_standards\":{\"score\":\"A\",\"reason\":\"Emoji Policy: 1 in headline, 0 in body (medium policy compliant), emoji placed at end of headline. Accessibility: Emoji is semantic (💨 reinforces \\\"going fast\\\"), message remains clear without emoji, no body-part emojis.\"},\"message_strategy_structure\":{\"score\":\"A\",\"reason\":\"Strategy: FOMO/urgency clearly signaled by 'going fast' and 'Don’t miss' in headline and body. Single Objective: Single clearance/urgency focus maintained across categories (toys, fashion & home) under one theme. Coherence: Body reinforces the headline without introducing unrelated offers.\"},\"content_quality_accuracy\":{\"score\":\"A\",\"reason\":\"Copy Quality: Clear, urgent hook front-loaded with 'Clearance' and 'going fast'. CTA: 'Tap to shop' is embedded, mobile-first, and uses approved verbs aligned to the clearance landing page. Relevance: Matches PageContext categories and the provided landing page. Hallucination: No unsupported factual claims.\"}},\"verdict\":\"approved\",\"summary_reason\":\"All metrics needs are adequately met. Improve headline length to the optimal 25–30 characters (headline is currently 22 chars) by adding a detail (e.g., specify a category or short qualifier) to better hit the recommended range.\",\"id\":2,\"summary\":{\"verdict\":\"approved\",\"overall_score\":0,\"reason\":\"\"}}],\"uniqueness_evaluation\":{\"score\":\"A\",\"reason\":\"Lazy Twins: None. Emoji: Good variety (2 different emojis used). CTA: 2 verbs used (Browse, Shop). Strategy: Value 1, FOMO 1, Newness 0 — reasonable mix across the declared 'all' strategy.\"}}],\"summary\":{\"total_notifications\":2,\"models_used\":1,\"failed_models\":0}}}}"
+            }
+        ],
+        "structuredContent": {
+            "status": "success",
+            "data": {
+                "page_url": "https://www.walmart.com/shop/deals/clearance",
+                "messaging_strategy": "all",
+                "emoji_usage": "medium",
+                "num_notifications": 2,
+                "model_used": "gpt-5-mini",
+                "tenant": "walmart",
+                "locale": "en_US",
+                "generation_mode": "consolidated",
+                "notifications": [
+                    {
+                        "headline": "Clearance: low home prices 🏷️",
+                        "body_copy": "Low prices on home décor & furniture. Tap to browse clearance.",
+                        "hook": "Value/Deal"
+                    },
+                    {
+                        "headline": "Clearance going fast 💨",
+                        "body_copy": "Don’t miss clearance items in toys, fashion & home. Tap to shop.",
+                        "hook": "FOMO/Urgency"
+                    }
+                ],
+                "evaluation": {
+                    "results": [
+                        {
+                            "model_name": "gpt-5-mini",
+                            "batch_evaluations": [
+                                {
+                                    "notification_id": 1,
+                                    "headline": "Clearance: low home prices 🏷️",
+                                    "body_copy": "Low prices on home décor & furniture. Tap to browse clearance.",
+                                    "declared_strategy": "Value/Deal",
+                                    "declared_emoji_usage": "medium",
+                                    "metrics": {
+                                        "brand_safety_compliance": {
+                                            "score": "A",
+                                            "reason": "Brand Voice: Conversational, captivating, and confident — uses simple, direct language like 'Low prices' and the clear CTA 'Tap to browse'. Brand Safety: No violations detected. Customer Safety: No issues found."
+                                        },
+                                        "technical_format_constraints": {
+                                            "score": "A",
+                                            "reason": "Char Limits: Headline 28 chars, Body 62 chars - Within optimal. Formatting: Clean sentence case, uses '&', body has proper terminal punctuation. Prohibited Terms: None."
+                                        },
+                                        "emoji_standards": {
+                                            "score": "A",
+                                            "reason": "Emoji Policy: 1 in headline, 0 in body (medium policy compliant), emoji placed at end of headline. Accessibility: Emoji is semantic (🏷️ supports pricing/message), message is understandable without emoji, no body-part emojis."
+                                        },
+                                        "message_strategy_structure": {
+                                            "score": "A",
+                                            "reason": "Strategy: Value/deal clearly expressed in both headline ('low home prices') and body ('Low prices on home décor & furniture'). Single Objective: Single clearance/value focus maintained (home décor & furniture are within one theme). Coherence: Body expands the headline without introducing other themes."
+                                        },
+                                        "content_quality_accuracy": {
+                                            "score": "A",
+                                            "reason": "Copy Quality: Strong front-load 'Clearance' and clear value 'Low prices' — concise and attention-getting. CTA: Embedded 'Tap to browse' uses approved verbs and is mobile-first. Relevance: Aligned with the clearance landing page and PageContext categories (Home, Furniture). Hallucination: No unsupported claims."
+                                        }
+                                    },
+                                    "verdict": "approved",
+                                    "summary_reason": "All metrics needs are adequately met.",
+                                    "id": 1,
+                                    "summary": {
+                                        "verdict": "approved",
+                                        "overall_score": 0,
+                                        "reason": ""
+                                    }
+                                },
+                                {
+                                    "notification_id": 2,
+                                    "headline": "Clearance going fast 💨",
+                                    "body_copy": "Don’t miss clearance items in toys, fashion & home. Tap to shop.",
+                                    "declared_strategy": "FOMO/Urgency",
+                                    "declared_emoji_usage": "medium",
+                                    "metrics": {
+                                        "brand_safety_compliance": {
+                                            "score": "A",
+                                            "reason": "Brand Voice: Conversational and confident — uses the direct imperative 'Don’t miss' and plain language like 'clearance items'. Brand Safety: No violations detected. Customer Safety: No issues found."
+                                        },
+                                        "technical_format_constraints": {
+                                            "score": "B",
+                                            "reason": "Char Limits: Headline 22 chars, Body 64 chars - Within limits but headline is below the optimal 25–30 range. Formatting: Clean sentence case, uses '&', body punctuation correct. Prohibited Terms: None."
+                                        },
+                                        "emoji_standards": {
+                                            "score": "A",
+                                            "reason": "Emoji Policy: 1 in headline, 0 in body (medium policy compliant), emoji placed at end of headline. Accessibility: Emoji is semantic (💨 reinforces \"going fast\"), message remains clear without emoji, no body-part emojis."
+                                        },
+                                        "message_strategy_structure": {
+                                            "score": "A",
+                                            "reason": "Strategy: FOMO/urgency clearly signaled by 'going fast' and 'Don’t miss' in headline and body. Single Objective: Single clearance/urgency focus maintained across categories (toys, fashion & home) under one theme. Coherence: Body reinforces the headline without introducing unrelated offers."
+                                        },
+                                        "content_quality_accuracy": {
+                                            "score": "A",
+                                            "reason": "Copy Quality: Clear, urgent hook front-loaded with 'Clearance' and 'going fast'. CTA: 'Tap to shop' is embedded, mobile-first, and uses approved verbs aligned to the clearance landing page. Relevance: Matches PageContext categories and the provided landing page. Hallucination: No unsupported factual claims."
+                                        }
+                                    },
+                                    "verdict": "approved",
+                                    "summary_reason": "All metrics needs are adequately met. Improve headline length to the optimal 25–30 characters (headline is currently 22 chars) by adding a detail (e.g., specify a category or short qualifier) to better hit the recommended range.",
+                                    "id": 2,
+                                    "summary": {
+                                        "verdict": "approved",
+                                        "overall_score": 0,
+                                        "reason": ""
+                                    }
+                                }
+                            ],
+                            "uniqueness_evaluation": {
+                                "score": "A",
+                                "reason": "Lazy Twins: None. Emoji: Good variety (2 different emojis used). CTA: 2 verbs used (Browse, Shop). Strategy: Value 1, FOMO 1, Newness 0 — reasonable mix across the declared 'all' strategy."
+                            }
+                        }
+                    ],
+                    "summary": {
+                        "total_notifications": 2,
+                        "models_used": 1,
+                        "failed_models": 0
+                    }
+                }
+            }
+        },
+        "isError": false
+    }
+}
+
+:ping - 2026-03-12 17:33:01.522629+00:00
+12:33:01.501
+:ping - 2026-03-12 17:32:46.520798+00:00
+12:32:46.588
+:ping - 2026-03-12 17:32:31.520286+00:00
+12:32:31.500
+:ping - 2026-03-12 17:32:16.519500+00:00
+12:32:16.498
+:ping - 2026-03-12 17:32:01.518021+00:00
+12:32:01.527
+:ping - 2026-03-12 17:31:46.517539+00:00
+12:31:46.501
+:ping - 2026-03-12 17:31:31.516154+00:00
+12:31:31.497
+:ping - 2026-03-12 17:31:16.515787+00:00
+12:31:16.502
+:ping - 2026-03-12 17:31:01.514750+00:00
+12:31:01.520
+:ping - 2026-03-12 17:30:46.514128+00:00
+12:30:46.494
+
+
+this MCP server has lot of other tools, even get workfront project metadata, send email, send email with push notifications, upload pushnotification to DAM etc.. 
+
+curl --location 'https://cbs-content-mcp-server.cbs-mcp.dev.k8s.walmart.net/mcp' \
+--header 'Content-Type: application/json' \
+--header 'Accept: application/json,text/event-stream' \
+--data '{
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "tools/call",
+    "params": {
+      "name": "workfront_get_metadata",
+      "arguments": {
+        "project_id": "692e019700005db04a33135246d41982",
+        "field_names": ["DE:Copy Direction"]
+      }
+    }
+  }'
+
+  Response : 
+  Connection closed
+12:26:21.191
+message
+{
+    "jsonrpc": "2.0",
+    "id": 1,
+    "result": {
+        "content": [
+            {
+                "type": "text",
+                "text": "{\"status\":\"success\",\"data\":{\"project_id\":\"69b18b90000050500e6247facdd92998\",\"DE:Copy Direction\":{\"blocks\":[{\"key\":\"6oqol\",\"text\":\"Creative Brief\\nCampaign: Flash Deals – CRM Push Notifications\\n1. Creative Objective\\nCreate high-impact, urgency-driven push notifications that immediately communicate value\\nand trigger impulse purchases.\\n2. Core Message\\nAct Now. Save Big. Limited Time.\\n3. Audience Insight\\nConsumers respond to time-bound deals, high perceived savings, scarcity cues, and\\npersonalization. They ignore generic, overly long, or repetitive promotional messages.\\n4. Value Proposition\\nDeep savings on high-demand products for a limited time, accessible instantly via the app.\\n5. Tone & Voice\\n- Energetic\\n- Urgent\\n- Direct\\n- Clear\\n- Minimal clutter\\n6. Messaging Framework\\nHeadline Structures:\\n- Up to 40% Off — Today Only\\n- 4 Hours Left: Flash Deals Live\\n- Electronics Flash Sale — Ends 7PM\\n- {{FirstName}}, Your Favorite Deals Are Live\\n7. Sample Push Copy\\nExample 1:\\nTitle: Flash Deals Are Live\\nBody: Up to 40% off top picks. Ends in 4 hours. Shop now.\\nExample 2:\\nTitle: 3 Hours Left\\nBody: Last chance to grab today’s biggest deals.\\n8. CTA Strategy\\nPrimary CTAs:\\n- Shop Now\",\"type\":\"unstyled\",\"depth\":0,\"inlineStyleRanges\":[],\"entityRanges\":[],\"data\":{}},{\"key\":\"9v8p9\",\"text\":\"- View Deals\\n- See Offers\\nAvoid soft CTAs like Learn More.\\n9. Guardrails\\n- Title: 40–60 characters\\n- Body: Under 90 characters\\n- Limit emoji usage\\n- Frequency capped\\n- Deep link tested\\n10. Personalization Tokens\\n- {{FirstName}}\\n- {{FavoriteCategory}}\\n- {{NearestStore}}\\n- {{DiscountPercentage}}\\n- {{CountdownTime}}\\n11. Approval Checklist\\n- Offer accuracy validated\\n- Deep link QA complete\\n- Personalization QA complete\\n- Inventory logic validated\\n- Segmentation exclusions confirmed\",\"type\":\"unstyled\",\"depth\":0,\"inlineStyleRanges\":[],\"entityRanges\":[],\"data\":{}}],\"entityMap\":{}}}}"
+            }
+        ],
+        "structuredContent": {
+            "status": "success",
+            "data": {
+                "project_id": "69b18b90000050500e6247facdd92998",
+                "DE:Copy Direction": {
+                    "blocks": [
+                        {
+                            "key": "6oqol",
+                            "text": "Creative Brief\nCampaign: Flash Deals – CRM Push Notifications\n1. Creative Objective\nCreate high-impact, urgency-driven push notifications that immediately communicate value\nand trigger impulse purchases.\n2. Core Message\nAct Now. Save Big. Limited Time.\n3. Audience Insight\nConsumers respond to time-bound deals, high perceived savings, scarcity cues, and\npersonalization. They ignore generic, overly long, or repetitive promotional messages.\n4. Value Proposition\nDeep savings on high-demand products for a limited time, accessible instantly via the app.\n5. Tone & Voice\n- Energetic\n- Urgent\n- Direct\n- Clear\n- Minimal clutter\n6. Messaging Framework\nHeadline Structures:\n- Up to 40% Off — Today Only\n- 4 Hours Left: Flash Deals Live\n- Electronics Flash Sale — Ends 7PM\n- {{FirstName}}, Your Favorite Deals Are Live\n7. Sample Push Copy\nExample 1:\nTitle: Flash Deals Are Live\nBody: Up to 40% off top picks. Ends in 4 hours. Shop now.\nExample 2:\nTitle: 3 Hours Left\nBody: Last chance to grab today’s biggest deals.\n8. CTA Strategy\nPrimary CTAs:\n- Shop Now",
+                            "type": "unstyled",
+                            "depth": 0,
+                            "inlineStyleRanges": [],
+                            "entityRanges": [],
+                            "data": {}
+                        },
+                        {
+                            "key": "9v8p9",
+                            "text": "- View Deals\n- See Offers\nAvoid soft CTAs like Learn More.\n9. Guardrails\n- Title: 40–60 characters\n- Body: Under 90 characters\n- Limit emoji usage\n- Frequency capped\n- Deep link tested\n10. Personalization Tokens\n- {{FirstName}}\n- {{FavoriteCategory}}\n- {{NearestStore}}\n- {{DiscountPercentage}}\n- {{CountdownTime}}\n11. Approval Checklist\n- Offer accuracy validated\n- Deep link QA complete\n- Personalization QA complete\n- Inventory logic validated\n- Segmentation exclusions confirmed",
+                            "type": "unstyled",
+                            "depth": 0,
+                            "inlineStyleRanges": [],
+                            "entityRanges": [],
+                            "data": {}
+                        }
+                    ],
+                    "entityMap": {}
+                }
+            }
+        },
+        "isError": false
+    }
+}
+
+Connected to https://cbs-content-mcp-server.cbs-mcp.dev.k8s.walmart.net/mcp
+12:26:20.223
+
+
+Upload push notification to DAM : 
+curl --location 'https://cbs-content-mcp-server.cbs-mcp.dev.k8s.walmart.net/api/aem-upload-asset' \
+--form 'folder_path="/content/dam/library/kyle-test"' \
+--form 'file=@"/Users/n0c082s/Downloads/push-notifications (1).csv"'
+
+response: 
+{
+    "status": "success",
+    "data": {
+        "dam_path": "/content/dam/library/kyle-test/push-notifications (1).csv",
+        "asset_url": "https://author-p120867-e1855908.adobeaemcloud.com/content/dam/library/kyle-test/push-notifications (1).csv",
+        "asset_details_url": "https://author-p120867-e1855908.adobeaemcloud.com/assetdetails.html/content/dam/library/kyle-test/push-notifications (1).csv",
+        "folder_url": "https://author-p120867-e1855908.adobeaemcloud.com/assets.html/content/dam/library/kyle-test",
+        "file_name": "push-notifications (1).csv",
+        "mime_type": "text/csv",
+        "uploaded_at": "2026-03-12T17:38:32.119659",
+        "upload_duration_ms": 1987,
+        "response": {
+            "fileName": "push-notifications (1).csv"
+        }
+    }
+}
+
+MCP tool Send Email : 
+
+curl --location 'https://cbs-content-mcp-server.cbs-mcp.dev.k8s.walmart.net/mcp' \
+--header 'Content-Type: application/json' \
+--header 'Accept: application/json,text/event-stream' \
+--data-raw '{
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "tools/call",
+    "params": {
+      "name": "send_email",
+      "arguments": {
+        "to_emails": ["anusha.naredla@walmart.com","Nagateja.Chadalawada@walmart.com","Manikandan.Narayanan@walmart.com"],
+        "subject": "Generated Push Notifications",
+        "body": "Please find the content attached for Push Notification.",
+        "attachments": [
+          {
+            "file_name": "push-notifications_clearance.csv",
+            "content_base64": "Tm90aWZpY2F0aW9uIElELEhlYWRsaW5lLEJvZHkgQ29weSxEZWNsYXJlZCBTdHJhdGVneSxFdmFsIFN0YXR1cyxSZWFzb25pbmcKIjEiLCJDbGVhcmFuY2UhIiwiRGlzY292ZXIgZ3JlYXQgbG93IHByaWNlcyBvbiBpdGVtcyB5b3UgbG92ZS4gU2hvcCBub3cuIOKcqCIsIlZhbHVlL0RlYWwiLCJhcHByb3ZlZCIsIkFsbCBtZXRyaWNzIG5lZWRzIGFyZSBhZGVxdWF0ZWx5IG1ldC4iCiIyIiwiQ2xlYXJhbmNlIHNhdmluZ3MgYXJlIGhlcmUhIPCfj7fvuI8iLCJGaW5kIGFtYXppbmcgbG93IHByaWNlcyBhY3Jvc3MgdGhlIHN0b3JlLiBFeHBsb3JlIHRvZGF5LiDwn5KwIiwiVmFsdWUvRGVhbCIsImFwcHJvdmVkIiwiQWxsIG1ldHJpY3MgbmVlZHMgYXJlIGFkZXF1YXRlbHkgbWV0LiIKIjMiLCJEb24ndCBtaXNzIHRoZXNlIGxvdyBwcmljZXMg4o+wIiwiVGhlc2UgZGVhbHMgd29uJ3QgbGFzdCBsb25nLiBHcmFiIHRoZW0gYmVmb3JlIHRoZXkncmUgZ29uZS4g8J+UpSIsIkZPTU8vVXJnZW5jeSIsImFwcHJvdmVkIiwiQWxsIG1ldHJpY3MgbmVlZHMgYXJlIGFkZXF1YXRlbHkgbWV0LiIKIjQiLCJDbGVhcmFuY2U6IGJpZyBzYXZpbmdzIGFoZWFkIOKcqCIsIlNjb3JlIGluY3JlZGlibGUgbG93IHByaWNlcyBvbiBpdGVtcyBmb3IgeW91ciBob21lICYgbW9yZS4gU2hvcCBub3cuIPCfm5IiLCJWYWx1ZS9EZWFsIiwiYXBwcm92ZWQiLCJBbGwgbWV0cmljcyBuZWVkcyBhcmUgYWRlcXVhdGVseSBtZXQuIEJvZHkgY29weSBpcyBzbGlnaHRseSBvdXRzaWRlIHRoZSBvcHRpbWFsIGNoYXJhY3RlciByYW5nZTsgY29uc2lkZXIgc2hvcnRlbmluZyBmb3IgY29uY2lzZW5lc3MuIgoiNSIsIkdvaW5nIGZhc3Q6IENsZWFyYW5jZSBkZWFscyEg8J+SqCIsIkxpbWl0ZWQgc3RvY2sgYXZhaWxhYmxlLiBUYXAgdG8gZ2V0IHlvdXJzIGJlZm9yZSB0aGV5IHZhbmlzaC4g4o+zIiwiRk9NTy9VcmdlbmN5IiwiYXBwcm92ZWQiLCJBbGwgbWV0cmljcyBuZWVkcyBhcmUgYWRlcXVhdGVseSBtZXQuIgoiNiIsIlNob3AgY2xlYXJhbmNlICYgc2F2ZSBiaWcg8J+SsCIsIkV4cGxvcmUgZmFudGFzdGljIGxvdyBwcmljZXMgb24gZXZlcnl0aGluZyB5b3UgbmVlZC4gQnJvd3NlIHRvZGF5LiDinKgiLCJWYWx1ZS9EZWFsIiwiYXBwcm92ZWQiLCJBbGwgbWV0cmljcyBuZWVkcyBhcmUgYWRlcXVhdGVseSBtZXQuIEJvZHkgY29weSBpcyBzbGlnaHRseSBvdXRzaWRlIHRoZSBvcHRpbWFsIGNoYXJhY3RlciByYW5nZTsgY29uc2lkZXIgc2hvcnRlbmluZyBmb3IgY29uY2lzZW5lc3MuIgoiNyIsIkxhc3QgY2hhbmNlIGZvciBjbGVhcmFuY2UhIPCflKUiLCJEb24ndCB3YWl0IHRvIGdyYWIgdGhlc2UgbG93IHByaWNlcy4gU2hvcCBiZWZvcmUgaXQncyB0b28gbGF0ZS4g4o+wIiwiRk9NTy9VcmdlbmN5IiwiYXBwcm92ZWQiLCJBbGwgbWV0cmljcyBuZWVkcyBhcmUgYWRlcXVhdGVseSBtZXQuIgoiOCIsIkNsZWFyYW5jZSBwcmljZXMgeW91J2xsIGxvdmUg8J+kqSIsIkRpc2NvdmVyIGdyZWF0IGxvdyBwcmljZXMgb24gaXRlbXMgeW91J2xsIGFkb3JlLiBFeHBsb3JlIG5vdy4g8J+bje+4jyIsIlZhbHVlL0RlYWwiLCJhcHByb3ZlZCIsIkFsbCBtZXRyaWNzIG5lZWRzIGFyZSBhZGVxdWF0ZWx5IG1ldC4iCiI5IiwiQ2xlYXJhbmNlOiBwcmljZXMgZHJvcHBpbmcgbm93ISDwn5OJIiwiVGhlc2UgbG93IHByaWNlcyBhcmUgaGVyZSBmb3IgYSBsaW1pdGVkIHRpbWUuIEdyYWIgdGhlbSB0b2RheS4g8J+UpSIsIkZPTU8vVXJnZW5jeSIsImFwcHJvdmVkIiwiQWxsIG1ldHJpY3MgbmVlZHMgYXJlIGFkZXF1YXRlbHkgbWV0LiIKIjEwIiwiSHVnZSBzYXZpbmdzIGluIGNsZWFyYW5jZSEg8J+Pt++4jyIsIkZpbmQgYW1hemluZyBsb3cgcHJpY2VzIG9uIGl0ZW1zIGZvciBldmVyeW9uZS4gU2hvcCBub3cuIPCfkrAiLCJWYWx1ZS9EZWFsIiwiYXBwcm92ZWQiLCJBbGwgbWV0cmljcyBuZWVkcyBhcmUgYWRlcXVhdGVseSBtZXQuIgoiMTEiLCJDbGVhcmFuY2UgZXZlbnQ6IGFjdCBmYXN0ISDwn4+D8J+Pu+KAjeKZgO+4j/Cfj4Pwn4+94oCN4pmA77iP8J+Pg/Cfj7/igI3imYDvuI8iLCJUaGVzZSBsb3cgcHJpY2VzIHdvbid0IGxhc3QuIEdyYWIgdGhlbSBiZWZvcmUgdGhleSdyZSBnb25lLiIsIkZPTU8vVXJnZW5jeSIsImFwcHJvdmVkIiwiQWxsIG1ldHJpY3MgbmVlZHMgYXJlIGFkZXF1YXRlbHkgbWV0LiBCb2R5IGNvcHkgaXMgbWlzc2luZyB0ZXJtaW5hbCBwdW5jdHVhdGlvbjsgYWRkIGEgcGVyaW9kIGF0IHRoZSBlbmQuIgoiMTIiLCJDbGVhcmFuY2U6IGdyYWIgdGhlc2Ugc2F2aW5ncyEg4pyoIiwiU2NvcmUgaW5jcmVkaWJsZSBsb3cgcHJpY2VzIG9uIGl0ZW1zIHlvdSd2ZSBiZWVuIHdhbnRpbmcuIFNob3AgdG9kYXkuIPCfm5IiLCJWYWx1ZS9EZWFsIiwiYXBwcm92ZWQiLCJBbGwgbWV0cmljcyBuZWVkcyBhcmUgYWRlcXVhdGVseSBtZXQuIEJvZHkgY29weSBpcyBzbGlnaHRseSBvdXRzaWRlIHRoZSBvcHRpbWFsIGNoYXJhY3RlciByYW5nZTsgY29uc2lkZXIgc2hvcnRlbmluZyBmb3IgY29uY2lzZW5lc3MuIgoiMTMiLCJMaW1pdGVkIHN0b2NrOiBDbGVhcmFuY2Ugbm93ISDij7AiLCJUaGVzZSBsb3cgcHJpY2VzIGFyZSBnb2luZyBmYXN0LiBUYXAgdG8gZ2V0IHlvdXJzIGJlZm9yZSB0aGV5IHZhbmlzaC4g8J+UpSIsIkZPTU8vVXJnZW5jeSIsImFwcHJvdmVkIiwiQWxsIG1ldHJpY3MgbmVlZHMgYXJlIGFkZXF1YXRlbHkgbWV0LiIKIjE0IiwiQ2xlYXJhbmNlIHByaWNlcyB3b24ndCBsYXN0IPCfkqgiLCJEb24ndCBtaXNzIG91dCBvbiB0aGVzZSBhbWF6aW5nIGxvdyBwcmljZXMuIFNob3AgYmVmb3JlIGl0J3MgdG9vIGxhdGUuIOKPsyIsIkZPTU8vVXJnZW5jeSIsImFwcHJvdmVkIiwiQWxsIG1ldHJpY3MgbmVlZHMgYXJlIGFkZXF1YXRlbHkgbWV0LiBCb2R5IGNvcHkgaXMgc2xpZ2h0bHkgb3V0c2lkZSB0aGUgb3B0aW1hbCBjaGFyYWN0ZXIgcmFuZ2U7IGNvbnNpZGVyIHNob3J0ZW5pbmcgZm9yIGNvbmNpc2VuZXNzLiIKIjE1IiwiU2NvcmUgYmlnIHdpdGggY2xlYXJhbmNlIHNhdmluZ3Mg8J+SsCIsIkRpc2NvdmVyIGZhbnRhc3RpYyBsb3cgcHJpY2VzIG9uIGl0ZW1zIGZvciB5b3VyIGhvbWUgJiBtb3JlLiBFeHBsb3JlIG5vdy4g4pyoIiwiVmFsdWUvRGVhbCIsImFwcHJvdmVkIiwiQWxsIG1ldHJpY3MgbmVlZHMgYXJlIGFkZXF1YXRlbHkgbWV0LiBCb2R5IGNvcHkgaXMgc2xpZ2h0bHkgb3V0c2lkZSB0aGUgb3B0aW1hbCBjaGFyYWN0ZXIgcmFuZ2U7IGNvbnNpZGVyIHNob3J0ZW5pbmcgZm9yIGNvbmNpc2VuZXNzLiIKIjE2IiwiQ2xlYXJhbmNlOiBmaW5hbCBjYWxsIGZvciBzYXZpbmdzIPCfmqgiLCJUaGlzIGlzIHlvdXIgbGFzdCBjaGFuY2UgZm9yIHRoZXNlIGxvdyBwcmljZXMuIFNob3Agbm93IGJlZm9yZSB0aGV5J3JlIGdvbmUuIOKPsCIsIkZPTU8vVXJnZW5jeSIsImFwcHJvdmVkIiwiQWxsIG1ldHJpY3MgbmVlZHMgYXJlIGFkZXF1YXRlbHkgbWV0LiBCb2R5IGNvcHkgaXMgc2xpZ2h0bHkgb3V0c2lkZSB0aGUgb3B0aW1hbCBjaGFyYWN0ZXIgcmFuZ2U7IGNvbnNpZGVyIHNob3J0ZW5pbmcgZm9yIGNvbmNpc2VuZXNzLiIKIjE3IiwiRGlzY292ZXIgY2xlYXJhbmNlIGxvdyBwcmljZXMg4pyoIiwiRmluZCBhbWF6aW5nIGxvdyBwcmljZXMgb24gaXRlbXMgeW91J2xsIGxvdmUuIEJyb3dzZSB0b2RheS4g8J+bje+4jyIsIlZhbHVlL0RlYWwiLCJhcHByb3ZlZCIsIkFsbCBtZXRyaWNzIG5lZWRzIGFyZSBhZGVxdWF0ZWx5IG1ldC4iCiIxOCIsIkNsZWFyYW5jZSBpcyBlbmRpbmcgc29vbiEg8J+UpSIsIkdyYWIgdGhlc2UgbG93IHByaWNlcyBiZWZvcmUgdGhleSBkaXNhcHBlYXIuIFNob3Agbm93LiDij7MiLCJGT01PL1VyZ2VuY3kiLCJhcHByb3ZlZCIsIkFsbCBtZXRyaWNzIG5lZWRzIGFyZSBhZGVxdWF0ZWx5IG1ldC4iCiIxOSIsIllvdXIgY2xlYXJhbmNlIHNhdmluZ3MgYXdhaXQg8J+Pt++4jyIsIkV4cGxvcmUgZ3JlYXQgbG93IHByaWNlcyBvbiBpdGVtcyBqdXN0IGZvciB5b3UuIFNob3AgdG9kYXkuIPCfkrAiLCJWYWx1ZS9EZWFsIiwiYXBwcm92ZWQiLCJBbGwgbWV0cmljcyBuZWVkcyBhcmUgYWRlcXVhdGVseSBtZXQuIgoiMjAiLCJDbGVhcmFuY2U6IGRvbid0IHdhaXQgdG8gc2F2ZSEg4o+wIiwiVGhlc2UgbG93IHByaWNlcyBhcmUgZ29pbmcgZmFzdC4gVGFwIHRvIGdldCB5b3VycyBiZWZvcmUgdGhleSB2YW5pc2guIPCflKUiLCJGT01PL1VyZ2VuY3kiLCJhcHByb3ZlZCIsIkFsbCBtZXRyaWNzIG5lZWRzIGFyZSBhZGVxdWF0ZWx5IG1ldC4iCiIyMSIsIkFtYXppbmcgY2xlYXJhbmNlIHNhdmluZ3MhIPCfpKkiLCJEaXNjb3ZlciBpbmNyZWRpYmxlIGxvdyBwcmljZXMgb24gaXRlbXMgZm9yIGV2ZXJ5b25lLiBFeHBsb3JlIG5vdy4g4pyoIiwiVmFsdWUvRGVhbCIsImFwcHJvdmVkIiwiQWxsIG1ldHJpY3MgbmVlZHMgYXJlIGFkZXF1YXRlbHkgbWV0LiIKIjIyIiwiQ2xlYXJhbmNlOiBzaG9wIGJlZm9yZSBpdCdzIGdvbmUg8J+SqCIsIkxpbWl0ZWQgc3RvY2sgYXZhaWxhYmxlLiBHcmFiIHRoZXNlIGxvdyBwcmljZXMgYmVmb3JlIHRoZXkgZGlzYXBwZWFyLiDij7MiLCJGT01PL1VyZ2VuY3kiLCJhcHByb3ZlZCIsIkFsbCBtZXRyaWNzIG5lZWRzIGFyZSBhZGVxdWF0ZWx5IG1ldC4gQm9keSBjb3B5IGlzIHNsaWdodGx5IG91dHNpZGUgdGhlIG9wdGltYWwgY2hhcmFjdGVyIHJhbmdlOyBjb25zaWRlciBzaG9ydGVuaW5nIGZvciBjb25jaXNlbmVzcy4iCiIyMyIsIkRlZXAgc2F2aW5ncyBpbiBjbGVhcmFuY2UhIPCfj7fvuI8iLCJGaW5kIGZhbnRhc3RpYyBsb3cgcHJpY2VzIGFjcm9zcyBhbGwgZGVwYXJ0bWVudHMuIFNob3Agbm93LiDwn5uSIiwiVmFsdWUvRGVhbCIsInJlamVjdGVkIiwiUmVqZWN0ZWQgZHVlIHRvIEJyYW5kICYgU2FmZXR5IENvbXBsaWFuY2UgYW5kIFRlY2huaWNhbCBGb3JtYXQgJiBDb25zdHJhaW50cy4gVGhlIGJvZHkgY29weSB1c2VzIHRoZSBwcm9oaWJpdGVkIG1lcmNoLXNwZWFrIHRlcm0gJ2RlcGFydG1lbnRzJzsgcmVwbGFjZSB3aXRoIGN1c3RvbWVyLWZhY2luZyBsYW5ndWFnZSBsaWtlICdhY3Jvc3MgdGhlIHN0b3JlJyBvciAnb24gZXZlcnl0aGluZyB5b3UgbmVlZCcuIgoiMjQiLCJDbGVhcmFuY2UgZGVhbHMgYXJlIGdvaW5nIGZhc3QhIPCflKUiLCJEb24ndCBtaXNzIG91dCBvbiB0aGVzZSBhbWF6aW5nIGxvdyBwcmljZXMuIFRhcCB0byBzYXZlIHRvZGF5LiDij7AiLCJGT01PL1VyZ2VuY3kiLCJhcHByb3ZlZCIsIkFsbCBtZXRyaWNzIG5lZWRzIGFyZSBhZGVxdWF0ZWx5IG1ldC4iCiIyNSIsIkNsZWFyYW5jZTogbG93IHByaWNlcyB5b3UnbGwgbG92ZSDwn6SpIiwiU2NvcmUgZ3JlYXQgbG93IHByaWNlcyBvbiBpdGVtcyB5b3UnbGwgYWRvcmUuIEJyb3dzZSB0b2RheS4g8J+bje+4jyIsIlZhbHVlL0RlYWwiLCJhcHByb3ZlZCIsIkFsbCBtZXRyaWNzIG5lZWRzIGFyZSBhZGVxdWF0ZWx5IG1ldC4iCiJCYXRjaCBVbmlxdWVuZXNzIEF1ZGl0IiwiTGF6eSBUd2luczogTWFueSBzdHJ1Y3R1cmFsIG92ZXJsYXBzLCBlc3BlY2lhbGx5IHdpdGhpbiBWYWx1ZS9EZWFsIChlLmcuLCBOMS9OOC9OMTcvTjIxL04yNSwgTjQvTjEyL04xNSkgYW5kIEZPTU8vVXJnZW5jeSBzdHJhdGVnaWVzIChlLmcuLCBOMy9OMTEsIE4xMy9OMjAsIE41L04yMikuIEVtb2ppOiBHb29kIHZhcmlldHkgb2YgaW5kaXZpZHVhbCBlbW9qaXMsIGJ1dCByZXBldGl0aXZlIHBhaXJpbmdzIChlLmcuLCDinKgv8J+bkiwg8J+Pt++4jy/wn5KwLCDij7Av8J+UpSwg8J+SqC/ij7MpIGxlYWQgdG8gdmlzdWFsIGZhdGlndWUuIENUQTogNSB1bmlxdWUgdmVyYnMgdXNlZCAoU2hvcCwgRXhwbG9yZSwgR3JhYiwgVGFwLCBCcm93c2UpLiBTdHJhdGVneTogQmFsYW5jZWQgbWl4IG9mIFZhbHVlL0RlYWwgKDUyJSkgYW5kIEZPTU8vVXJnZW5jeSAoNDglKS4iLCIiLCIiLCIiLCIi"
+          }
+        ]
+      }
+    }
+  }'
+
+   Response : 
+   Connection closed
+12:42:07.583
+message
+{
+    "jsonrpc": "2.0",
+    "id": 1,
+    "result": {
+        "content": [
+            {
+                "type": "text",
+                "text": "{\"status\":\"success\",\"recipients\":[\"anusha.naredla@walmart.com\",\"Nagateja.Chadalawada@walmart.com\",\"Manikandan.Narayanan@walmart.com\"],\"subject\":\"Generated Push Notifications\"}"
+            }
+        ],
+        "structuredContent": {
+            "status": "success",
+            "recipients": [
+                "anusha.naredla@walmart.com",
+                "Nagateja.Chadalawada@walmart.com",
+                "Manikandan.Narayanan@walmart.com"
+            ],
+            "subject": "Generated Push Notifications"
+        },
+        "isError": false
+    }
+}
+
+Connected to https://cbs-content-mcp-server.cbs-mcp.dev.k8s.walmart.net/mcp
+12:42:06.269
+

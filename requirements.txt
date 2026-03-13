@@ -4,7 +4,14 @@
 pyzeebe==4.1.0
 
 # HTTP client for MCP Server
+httpx==0.27.0
 requests==2.31.0
+
+# Postgres database
+psycopg2-binary==2.9.9
+
+# REST API server
+flask==3.0.0
 
 # Async support
 asyncio==3.4.3
