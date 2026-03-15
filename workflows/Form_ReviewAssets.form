@@ -6,7 +6,7 @@
   },
   "components": [
     {
-      "text": "## Review MDS Evaluation Results\n\nReview the assets that have been evaluated by the MDS (Moderation Service) and decide whether to approve, request changes, or reject them.",
+      "text": "## Review MDS Evaluation Results\n\nThe assets below have been evaluated by MDS (Moderation Service). Review the confidence scores and violations, then click **Complete** to acknowledge and close this task.",
       "label": "Text view",
       "type": "text",
       "layout": {
@@ -16,57 +16,41 @@
       "id": "Field_Instructions"
     },
     {
-      "label": "Processed Assets",
-      "type": "textarea",
+      "label": "Job ID",
+      "type": "textfield",
       "layout": {
         "row": "Row_1",
+        "columns": 6
+      },
+      "id": "Field_JobId",
+      "key": "cbsJobId",
+      "description": "CBS Job identifier",
+      "readonly": true
+    },
+    {
+      "label": "MDS Job ID",
+      "type": "textfield",
+      "layout": {
+        "row": "Row_1",
+        "columns": 6
+      },
+      "id": "Field_MdsJobId",
+      "key": "mdsJobId",
+      "description": "MDS Job identifier",
+      "readonly": true
+    },
+    {
+      "label": "Processed Assets (MDS Results)",
+      "type": "textarea",
+      "layout": {
+        "row": "Row_2",
         "columns": null
       },
       "id": "Field_ProcessedAssets",
       "key": "processedAssets",
       "description": "JSON array of assets with MDS scores and violations",
       "readonly": true,
-      "rows": 8
-    },
-    {
-      "values": [
-        {
-          "label": "Approve",
-          "value": "approved"
-        },
-        {
-          "label": "Request Changes",
-          "value": "feedback"
-        },
-        {
-          "label": "Reject",
-          "value": "rejected"
-        }
-      ],
-      "label": "Review Decision",
-      "type": "select",
-      "layout": {
-        "row": "Row_2",
-        "columns": null
-      },
-      "id": "Field_ReviewDecision",
-      "key": "reviewDecision",
-      "description": "Select your decision for these assets",
-      "validate": {
-        "required": true
-      }
-    },
-    {
-      "label": "Feedback / Comments",
-      "type": "textarea",
-      "layout": {
-        "row": "Row_3",
-        "columns": null
-      },
-      "id": "Field_FeedbackText",
-      "key": "feedbackText",
-      "description": "Optional: Provide feedback or comments about the assets",
-      "rows": 4
+      "rows": 10
     }
   ],
   "type": "default",
