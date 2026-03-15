@@ -6,7 +6,7 @@
   },
   "components": [
     {
-      "text": "## Review MDS Evaluation Results\n\nThe assets below have been evaluated by MDS (Moderation Service). Review the confidence scores and violations, then click **Complete** to acknowledge and close this task.",
+      "text": "## Review MDS Evaluation Results\n\nReview the assets evaluated by MDS. Select a decision and click **Complete**.",
       "label": "Text view",
       "type": "text",
       "layout": {
@@ -48,9 +48,33 @@
       },
       "id": "Field_ProcessedAssets",
       "key": "processedAssets",
-      "description": "JSON array of assets with MDS scores and violations",
+      "description": "JSON array of assets with confidence scores and violations",
       "readonly": true,
       "rows": 10
+    },
+    {
+      "label": "Review Decision",
+      "type": "radio",
+      "layout": {
+        "row": "Row_3",
+        "columns": null
+      },
+      "id": "Field_ReviewDecision",
+      "key": "reviewDecision",
+      "description": "Select your decision for these assets",
+      "values": [
+        {
+          "label": "✅  Approve",
+          "value": "approved"
+        },
+        {
+          "label": "❌  Reject",
+          "value": "rejected"
+        }
+      ],
+      "validate": {
+        "required": true
+      }
     }
   ],
   "type": "default",
